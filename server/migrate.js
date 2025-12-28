@@ -29,6 +29,20 @@ async function runMigration() {
             // Clean up any whitespace in project codes
             await db.query(`UPDATE projects SET project_code = TRIM(project_code) WHERE project_code != TRIM(project_code)`);
 
+            // Seed sample products if not exist
+            await db.query(`
+                INSERT INTO products (code, name, category, description, is_active) VALUES
+                ('PROD001', 'Leadership Development', 'Training', 'หลักสูตรพัฒนาภาวะผู้นำ', TRUE),
+                ('PROD002', 'Team Building Workshop', 'Workshop', 'หลักสูตร Team Building', TRUE),
+                ('PROD003', 'Communication Skills', 'Training', 'หลักสูตรทักษะการสื่อสาร', TRUE),
+                ('PROD004', 'Project Management', 'Training', 'หลักสูตรการบริหารโครงการ', TRUE),
+                ('PROD005', 'Creative Thinking', 'Workshop', 'หลักสูตรความคิดสร้างสรรค์', TRUE),
+                ('PROD006', 'Customer Service Excellence', 'Training', 'หลักสูตรการบริการลูกค้า', TRUE),
+                ('PROD007', 'Time Management', 'Training', 'หลักสูตรการบริหารเวลา', TRUE),
+                ('PROD008', 'Presentation Skills', 'Training', 'หลักสูตรทักษะการนำเสนอ', TRUE)
+                ON CONFLICT (code) DO NOTHING
+            `);
+
             console.log('✅ Seed data verified.');
             return true;
         }

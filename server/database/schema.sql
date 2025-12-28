@@ -221,6 +221,18 @@ INSERT INTO expense_codes (code, title, description) VALUES
 ('OTHER', 'Other', 'อื่นๆ')
 ON CONFLICT (code) DO NOTHING;
 
+-- Seed Sample Products (หลักสูตร)
+INSERT INTO products (code, name, category, description, is_active) VALUES
+('PROD001', 'Leadership Development', 'Training', 'หลักสูตรพัฒนาภาวะผู้นำ', TRUE),
+('PROD002', 'Team Building Workshop', 'Workshop', 'หลักสูตร Team Building', TRUE),
+('PROD003', 'Communication Skills', 'Training', 'หลักสูตรทักษะการสื่อสาร', TRUE),
+('PROD004', 'Project Management', 'Training', 'หลักสูตรการบริหารโครงการ', TRUE),
+('PROD005', 'Creative Thinking', 'Workshop', 'หลักสูตรความคิดสร้างสรรค์', TRUE),
+('PROD006', 'Customer Service Excellence', 'Training', 'หลักสูตรการบริการลูกค้า', TRUE),
+('PROD007', 'Time Management', 'Training', 'หลักสูตรการบริหารเวลา', TRUE),
+('PROD008', 'Presentation Skills', 'Training', 'หลักสูตรทักษะการนำเสนอ', TRUE)
+ON CONFLICT (code) DO NOTHING;
+
 -- Seed Default User (required for foreign key references)
 INSERT INTO users (id, username, email, full_name, is_active) VALUES
 (1, 'system', 'system@insight-financial.com', 'System User', TRUE)
