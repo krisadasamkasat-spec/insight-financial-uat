@@ -221,6 +221,14 @@ INSERT INTO expense_codes (code, title, description) VALUES
 ('OTHER', 'Other', 'อื่นๆ')
 ON CONFLICT (code) DO NOTHING;
 
+-- Seed Default User (required for foreign key references)
+INSERT INTO users (id, username, email, full_name, is_active) VALUES
+(1, 'system', 'system@insight-financial.com', 'System User', TRUE)
+ON CONFLICT (id) DO NOTHING;
+
+-- Reset sequence for users table
+SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));
+
 -- =====================================================
 -- 6. CREATE INDEXES FOR PERFORMANCE
 -- =====================================================

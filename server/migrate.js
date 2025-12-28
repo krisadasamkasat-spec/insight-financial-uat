@@ -17,7 +17,15 @@ async function runMigration() {
         const tablesExist = parseInt(result.rows[0].count) > 0;
 
         if (tablesExist) {
-            console.log('✅ Database tables already exist. Skipping migration.');
+            console.log('✅ Database tables already exist. Checking seed data...');
+
+            // Ensure default user exists
+            await db.query(`
+                INSERT INTO users (id, username, email, full_name, is_active) VALUES
+                (1, 'system', 'system@insight-financial.com', 'System User', TRUE)
+                ON CONFLICT (id) DO NOTHING
+            `);
+            console.log('✅ Seed data verified.');
             return true;
         }
 
