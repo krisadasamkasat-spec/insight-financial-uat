@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+const runMigration = require('./migrate');
+
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -24,6 +26,9 @@ app.get('/', (req, res) => {
   res.send('Insight Financial API is running');
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+// Run migration then start server
+runMigration().then(() => {
+  app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
 });
