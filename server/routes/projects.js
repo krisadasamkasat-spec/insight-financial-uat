@@ -2,6 +2,22 @@ const express = require('express');
 const router = express.Router();
 const projectService = require('../services/projectService');
 
+// DEBUG: List all project codes
+router.get('/debug/list-all', async (req, res) => {
+    try {
+        const db = require('../db');
+        const result = await db.query('SELECT project_code, project_name FROM projects');
+        console.log('📋 All projects in DB:', result.rows);
+        res.json({
+            count: result.rows.length,
+            projects: result.rows
+        });
+    } catch (err) {
+        console.error('Debug error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // GET /api/projects
 // Retrieve all projects with their team members
 router.get('/', async (req, res) => {
@@ -18,7 +34,10 @@ router.get('/', async (req, res) => {
 router.get('/:project_code', async (req, res) => {
     try {
         const { project_code } = req.params;
+        console.log(`📋 Fetching project: "${project_code}"`);
+
         const project = await projectService.getProjectByCode(project_code);
+        console.log(`📋 Query result:`, project ? 'Found' : 'Not found');
 
         if (!project) {
             return res.status(404).json({ error: 'Project not found' });
