@@ -29,6 +29,26 @@ async function runMigration() {
             // Clean up any whitespace in project codes
             await db.query(`UPDATE projects SET project_code = TRIM(project_code) WHERE project_code != TRIM(project_code)`);
 
+            // Add missing columns to expenses table if they don't exist
+            const alterExpenseQueries = [
+                `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS title VARCHAR(255)`,
+                `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS recipient VARCHAR(255)`,
+                `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS base_amount NUMERIC(15, 2)`,
+                `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS vat_rate NUMERIC(5, 2) DEFAULT 7.00`,
+                `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id)`,
+                `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS approved_by INTEGER REFERENCES users(id)`,
+                `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP`,
+                `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS reject_reason TEXT`
+            ];
+
+            for (const q of alterExpenseQueries) {
+                try {
+                    await db.query(q);
+                } catch (e) {
+                    // Ignore if column already exists
+                }
+            }
+
             // Seed actual products if not exist
             await db.query(`
                 INSERT INTO products (code, name, category, description, is_active) VALUES
