@@ -221,16 +221,69 @@ INSERT INTO expense_codes (code, title, description) VALUES
 ('OTHER', 'Other', 'อื่นๆ')
 ON CONFLICT (code) DO NOTHING;
 
--- Seed Sample Products (หลักสูตร)
+-- Seed Products (หลักสูตร - Actual Data)
 INSERT INTO products (code, name, category, description, is_active) VALUES
-('PROD001', 'Leadership Development', 'Training', 'หลักสูตรพัฒนาภาวะผู้นำ', TRUE),
-('PROD002', 'Team Building Workshop', 'Workshop', 'หลักสูตร Team Building', TRUE),
-('PROD003', 'Communication Skills', 'Training', 'หลักสูตรทักษะการสื่อสาร', TRUE),
-('PROD004', 'Project Management', 'Training', 'หลักสูตรการบริหารโครงการ', TRUE),
-('PROD005', 'Creative Thinking', 'Workshop', 'หลักสูตรความคิดสร้างสรรค์', TRUE),
-('PROD006', 'Customer Service Excellence', 'Training', 'หลักสูตรการบริการลูกค้า', TRUE),
-('PROD007', 'Time Management', 'Training', 'หลักสูตรการบริหารเวลา', TRUE),
-('PROD008', 'Presentation Skills', 'Training', 'หลักสูตรทักษะการนำเสนอ', TRUE)
+-- Advance AI Products
+('ADVAI-BUILD-AI', 'Build Your AI - Customize AI Empire & Army for Business', 'ADVAI', 'Advance AI', TRUE),
+('ADVAI-CONTENT', 'Advance AI for Creative Content Creation Across Digital Platform', 'ADVAI', 'Advance AI', TRUE),
+('ADVAI-GITHUB', 'Advance AI GitHub Copilot', 'ADVAI', 'Advance AI', TRUE),
+('ADVAI-MKT-STRATEGY', 'Advance AI for Marketing Strategy', 'ADVAI', 'Advance AI', TRUE),
+('ADVAI-MKT-STUDIO', 'Advance AI for Marketing Studio', 'ADVAI', 'Advance AI', TRUE),
+('ADVAI-PRESENT', 'The Magic of AI Presentation', 'ADVAI', 'Advance AI', TRUE),
+('ADVAI-PRODUCTIVITY', 'Advance AI Tools for Future Work', 'ADVAI', 'Advance AI', TRUE),
+('ADVAI-RESEARCH', 'Advance AI For Business Research and Strategy Analysis', 'ADVAI', 'Advance AI', TRUE),
+('ADVAI-RPA', 'Advance AI Automation with RPA', 'ADVAI', 'Advance AI', TRUE),
+('ADVAI-TIME-MGMT', 'AI for Time & Prioritize Management', 'ADVAI', 'Advance AI', TRUE),
+('ADVAI-WORKFLOW', 'Advance AI Automation Workflow', 'ADVAI', 'Advance AI', TRUE),
+-- Other Products
+('CANVA', 'Canva for Business', 'OTHER', 'อื่นๆ', TRUE),
+-- Generative AI Products
+('GENAI', 'Generative AI for All Level', 'GENAI', 'Generative AI', TRUE),
+('GENAI-BIZ', 'Generative AI for Business Transformation & Future Trends', 'GENAI', 'Generative AI', TRUE),
+('GENAI-EXECUTIVE', 'Generative AI for Executive', 'GENAI', 'Generative AI', TRUE),
+('GENAI-FIELD', 'Generative AI for Future Field Service', 'GENAI', 'Generative AI', TRUE),
+('GENAI-FINANCE', 'Generative AI for Finance', 'GENAI', 'Generative AI', TRUE),
+('GENAI-HALF', 'Generative AI for All Level - Half day', 'GENAI', 'Generative AI', TRUE),
+('GENAI-HR', 'Generative AI for HR', 'GENAI', 'Generative AI', TRUE),
+('GENAI-MKT', 'Generative AI for Marketing', 'GENAI', 'Generative AI', TRUE),
+('GENAI-OPERATION', 'Generative AI for Operation', 'GENAI', 'Generative AI', TRUE),
+('GENAI-RISK', 'Generative AI for Risk Management', 'GENAI', 'Generative AI', TRUE),
+('GENAI-SALES', 'Generative AI for Sales', 'GENAI', 'Generative AI', TRUE),
+('GENAI-TOWNHALL', 'Generative AI for All Level - Townhall', 'GENAI', 'Generative AI', TRUE),
+-- More Other Products
+('IMPT-PITCHING', 'Impact Pitch for Sales', 'OTHER', 'อื่นๆ', TRUE),
+('INS-DATA-ANALYTIC', 'Data Analytic And Visualization Made Easy With AI', 'OTHER', 'อื่นๆ', TRUE),
+-- Journey Programs
+('JOURNEY-AI-EXEC', '[Journey] AI for Executive Journey', 'JOURNEY', 'Journey Programs', TRUE),
+('JOURNEY-AI-MENTOR', '[Journey] AI Mentoring Program', 'JOURNEY', 'Journey Programs', TRUE),
+('JOURNEY-AI-TRANSFORM', '[Journey] AI Transformation Program', 'JOURNEY', 'Journey Programs', TRUE),
+('JOURNEY-GOAL', '[Journey] Design Your Goal & Work Life Balance', 'JOURNEY', 'Journey Programs', TRUE),
+('JOURNEY-ORG-LEADER', '[Journey] Organizational - Leadershift', 'JOURNEY', 'Journey Programs', TRUE),
+('JOURNEY-PEOPLE', '[Journey] Become the Person Everyone Loves to Work With', 'JOURNEY', 'Journey Programs', TRUE),
+('JOURNEY-SELF-LEADER', '[Journey] SELF - Leadershift', 'JOURNEY', 'Journey Programs', TRUE),
+('JOURNEY-TEAM-LEADER', '[Journey] TEAM - Leadershift', 'JOURNEY', 'Journey Programs', TRUE),
+('JOURNEY-TIME', '[Journey] Master Your Time', 'JOURNEY', 'Journey Programs', TRUE),
+('JOURNEY-TRAINER', '[Journey] Transformative Trainer', 'JOURNEY', 'Journey Programs', TRUE),
+-- More Other Products
+('LOGIC', 'Business Logical Thinking In The Age of AI', 'OTHER', 'อื่นๆ', TRUE),
+('PNEGO', 'Psychological Negotiation Tactics (With AI Assistance)', 'OTHER', 'อื่นๆ', TRUE),
+('POC-MENTOR', 'Project Mentoring (POC)', 'OTHER', 'อื่นๆ', TRUE),
+('PPTDE', 'Psychology of Presentation Design', 'OTHER', 'อื่นๆ', TRUE),
+('SALE-AJBALLY', 'Sale by AjBally', 'OTHER', 'อื่นๆ', TRUE),
+-- Skills Beyond AI Products
+('SKLBEYOND-COMMU', 'Communication', 'SKLBEYOND', 'Skills Beyond AI', TRUE),
+('SKLBEYOND-COMMU-PRESENT', 'Insight-Driven Powerful Presentation', 'SKLBEYOND', 'Skills Beyond AI', TRUE),
+('SKLBEYOND-CRITICAL', 'Critical Thinking', 'SKLBEYOND', 'Skills Beyond AI', TRUE),
+('SKLBEYOND-DT-AI', 'Design Thinking + AI', 'SKLBEYOND', 'Skills Beyond AI', TRUE),
+('SKLBEYOND-TEAM-MGMT', 'Team Management', 'SKLBEYOND', 'Skills Beyond AI', TRUE),
+('SKLBEYOND-THINK-DESIGN', 'Design Thinking', 'SKLBEYOND', 'Skills Beyond AI', TRUE),
+-- More Other Products
+('TIMEP', 'Time & Prioritize Psychology Management', 'OTHER', 'อื่นๆ', TRUE),
+-- Training Products
+('TRAIN-ITEQUIP', 'หยุดตบตี อุปกรณ์ IT ในห้องเรียน', 'TRAIN', 'Training', TRUE),
+('TRAIN-LED', 'LED Workshop Design', 'TRAIN', 'Training', TRUE),
+('TRAIN-TRANSFORMATIVE', 'Become Transformative Trainer', 'TRAIN', 'Training', TRUE),
+('TRAIN-WOWFA', 'Wow Facilitator', 'TRAIN', 'Training', TRUE)
 ON CONFLICT (code) DO NOTHING;
 
 -- Seed Default User (required for foreign key references)
