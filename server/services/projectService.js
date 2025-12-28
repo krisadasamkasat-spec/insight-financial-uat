@@ -55,6 +55,11 @@ const createProject = async (projectData) => {
         budget, participant_count, created_by, team_members
     } = projectData;
 
+    // Sanitize string fields - remove leading/trailing whitespace
+    const cleanProjectCode = project_code?.trim();
+    const cleanProjectName = project_name?.trim();
+    const cleanCustomerName = customer_name?.trim();
+
     const client = await db.pool.connect();
 
     try {
@@ -82,7 +87,7 @@ const createProject = async (projectData) => {
         `;
 
         const projectValues = [
-            project_code, project_name, product_code, customer_name, status || 'Pending',
+            cleanProjectCode, cleanProjectName, product_code, cleanCustomerName, status || 'Pending',
             project_type, start_date, end_date, location, description,
             budget, participant_count, creatorId
         ];

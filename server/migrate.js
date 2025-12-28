@@ -25,6 +25,10 @@ async function runMigration() {
                 (1, 'system', 'system@insight-financial.com', 'System User', TRUE)
                 ON CONFLICT (id) DO NOTHING
             `);
+
+            // Clean up any whitespace in project codes
+            await db.query(`UPDATE projects SET project_code = TRIM(project_code) WHERE project_code != TRIM(project_code)`);
+
             console.log('✅ Seed data verified.');
             return true;
         }
