@@ -7,8 +7,21 @@ const runMigration = require('./migrate');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// CORS Configuration
+const corsOptions = {
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://insight-financial.vercel.app',
+    'https://insight-financial-c1ysxj4m5-pamus-projects-82976268.vercel.app'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Routes
@@ -22,13 +35,25 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api/accounts', require('./routes/accounts'));
 app.use('/api/common', require('./routes/common'));
 
+// Health check endpoint
 app.get('/', (req, res) => {
   res.send('Insight Financial API is running');
 });
 
-// Run migration then start server
-runMigration().then(() => {
-  app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-  });
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Run migration then start server
+runMigration()
+  .then(() => {
+    app.listen(port, '0.0.0.0', () => {
+      console.log(`Server is running on port ${port}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Migration failed, starting server anyway:', err.message);
+    app.listen(port, '0.0.0.0', () => {
+      console.log(`Server is running on port ${port} (migration failed)`);
+    });
+  });
