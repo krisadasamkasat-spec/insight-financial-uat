@@ -147,26 +147,38 @@ const updateExpenseStatus = async (id, updateData) => {
         // FIX: Only deduct if it wasn't ALREADY paid
         if ((status === 'จ่ายแล้ว' || status === 'Paid') && (previousStatus !== 'จ่ายแล้ว' && previousStatus !== 'Paid')) {
             let accountId = updatedExpense.account_id;
-            let netAmount = updatedExpense.net_amount;
+            let netAmount = parseFloat(updatedExpense.net_amount) || 0;
 
-            // If no account_id, find primary account
+            console.log('💰 Processing payment:', { status, previousStatus, accountId, netAmount });
+
+            // If no account_id, find primary account or any account
             if (!accountId) {
-                const accResult = await client.query('SELECT id FROM financial_accounts WHERE is_primary = TRUE LIMIT 1');
+                let accResult = await client.query('SELECT id FROM financial_accounts WHERE is_primary = TRUE LIMIT 1');
+
+                // Fallback: if no primary, get any account
+                if (accResult.rows.length === 0) {
+                    accResult = await client.query('SELECT id FROM financial_accounts ORDER BY id LIMIT 1');
+                }
+
                 if (accResult.rows.length > 0) {
                     accountId = accResult.rows[0].id;
                     // Link expense to this account for history
                     await client.query('UPDATE expenses SET account_id = $1 WHERE id = $2', [accountId, id]);
+                    console.log('💰 Linked expense to account:', accountId);
                 }
             }
 
             // Deduct balance if we have an account ID
-            if (accountId) {
+            if (accountId && netAmount > 0) {
                 await client.query(
                     `UPDATE financial_accounts 
                      SET balance = balance - $1 
                      WHERE id = $2`,
                     [netAmount, accountId]
                 );
+                console.log('💰 Deducted balance:', netAmount, 'from account:', accountId);
+            } else {
+                console.log('⚠️ No deduction: accountId=', accountId, 'netAmount=', netAmount);
             }
         }
 
