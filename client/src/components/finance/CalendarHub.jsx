@@ -62,6 +62,8 @@ const COLOR_THEMES = {
  * @param {string} props.size - 'sm' | 'md' | 'lg' (default: 'md')
  * @param {Date} props.initialMonth - Initial month to display (default: current month)
  * @param {string} props.colorTheme - 'blue' | 'amber' | 'emerald' | 'red' | 'purple' (default: 'blue')
+ * @param {Date} props.highlightDate - Optional date to highlight (e.g., original payment date)
+ * @param {boolean} props.showTodayIndicator - If true, shows today indicator (default: true)
  */
 const CalendarHub = ({
     selectedDate = null,
@@ -75,6 +77,8 @@ const CalendarHub = ({
     size = 'md',
     initialMonth = null,
     colorTheme = 'blue',
+    highlightDate = null,
+    showTodayIndicator = true,
 }) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -198,6 +202,7 @@ const CalendarHub = ({
                         const isCurrentMonth = isSameMonth(day, currentMonth);
                         const isSelected = isSameDay(day, selectedDate);
                         const isToday = isSameDay(day, today);
+                        const isHighlighted = highlightDate && isSameDay(day, highlightDate);
                         const isInRange = showRangeHighlight && startDate && isDateInRange(day, startDate, endDate || startDate);
                         const isRangeStart = showRangeHighlight && isSameDay(day, startDate);
                         const isRangeEnd = showRangeHighlight && endDate && isSameDay(day, endDate);
@@ -224,9 +229,14 @@ const CalendarHub = ({
                         } else if (isInRange) {
                             bgClass = theme.range;
                             textClass = '';
-                        } else if (isToday) {
-                            bgClass = 'ring-2 ring-amber-400 bg-amber-50';
-                            textClass = 'text-amber-700 font-bold';
+                        } else if (isHighlighted) {
+                            // Highlight for original/current date (e.g., payment date)
+                            bgClass = 'ring-2 ring-gray-400 bg-gray-100';
+                            textClass = 'text-gray-800 font-bold';
+                        } else if (isToday && showTodayIndicator) {
+                            // Today indicator - subtle dot below number
+                            bgClass = '';
+                            textClass = 'text-amber-600 font-semibold';
                         }
 
                         const customContent = customDayContent ? customDayContent(day) : null;
@@ -245,6 +255,10 @@ const CalendarHub = ({
                                 `}
                             >
                                 <span>{day.getDate()}</span>
+                                {/* Today indicator dot */}
+                                {isToday && showTodayIndicator && !isSelected && !isHighlighted && (
+                                    <span className="absolute bottom-1 w-1 h-1 rounded-full bg-amber-500"></span>
+                                )}
                                 {customContent}
                             </button>
                         );

@@ -259,6 +259,7 @@ const PaymentCycleExpenseCard = ({
                                 initialMonth={paymentDate ? new Date(paymentDate) : null}
                                 size="md"
                                 colorTheme="amber"
+                                highlightDate={paymentDate ? new Date(paymentDate) : null}
                             />
 
                             {/* Selected Date Display */}
