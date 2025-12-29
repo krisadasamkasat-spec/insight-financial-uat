@@ -10,6 +10,10 @@ const StatusChangeConfirmModal = ({ isOpen, onClose, onConfirm, data, currentBal
     // Determine if this change adds or removes money
     let impact = 'none'; // 'add', 'deduct', 'none'
 
+    // Parse values as numbers to prevent string concatenation
+    const numericBalance = parseFloat(currentBalance) || 0;
+    const numericAmount = parseFloat(amount) || 0;
+
     if (type === 'expense') {
         if ((newStatus === 'Paid' || newStatus === 'จ่ายแล้ว') && (oldStatus !== 'Paid' && oldStatus !== 'จ่ายแล้ว')) {
             impact = 'deduct';
@@ -20,10 +24,10 @@ const StatusChangeConfirmModal = ({ isOpen, onClose, onConfirm, data, currentBal
         }
     }
 
-    // Calculate Estimated Balance
-    let estimatedBalance = currentBalance;
-    if (impact === 'add') estimatedBalance += amount;
-    if (impact === 'deduct') estimatedBalance -= amount;
+    // Calculate Estimated Balance (using parsed numbers)
+    let estimatedBalance = numericBalance;
+    if (impact === 'add') estimatedBalance = numericBalance + numericAmount;
+    if (impact === 'deduct') estimatedBalance = numericBalance - numericAmount;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

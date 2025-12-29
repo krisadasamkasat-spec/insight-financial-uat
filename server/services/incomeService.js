@@ -113,22 +113,34 @@ const updateIncome = async (id, updateData) => {
         else if (!wasReceived && isReceived) {
             let targetAccountId = updatedIncome.account_id;
 
-            // If no account_id, find primary account
+            console.log('💰 Processing income:', { status: newStatus, previousStatus, targetAccountId, newAmount });
+
+            // If no account_id, find primary account or any account
             if (!targetAccountId) {
-                const accResult = await client.query('SELECT id FROM financial_accounts WHERE is_primary = TRUE LIMIT 1');
+                let accResult = await client.query('SELECT id FROM financial_accounts WHERE is_primary = TRUE LIMIT 1');
+
+                // Fallback: if no primary, get any account
+                if (accResult.rows.length === 0) {
+                    accResult = await client.query('SELECT id FROM financial_accounts ORDER BY id LIMIT 1');
+                }
+
                 if (accResult.rows.length > 0) {
                     targetAccountId = accResult.rows[0].id;
                     // Link income to this account for history
                     await client.query('UPDATE incomes SET account_id = $1 WHERE id = $2', [targetAccountId, id]);
+                    console.log('💰 Linked income to account:', targetAccountId);
                 }
             }
 
             // Add balance if we have an account ID
-            if (targetAccountId) {
+            if (targetAccountId && newAmount > 0) {
                 await client.query(
                     'UPDATE financial_accounts SET balance = balance + $1 WHERE id = $2',
                     [newAmount, targetAccountId]
                 );
+                console.log('💰 Added balance:', newAmount, 'to account:', targetAccountId);
+            } else {
+                console.log('⚠️ No addition: accountId=', targetAccountId, 'newAmount=', newAmount);
             }
         }
         // Case 3: Was received and still received but amount changed -> Adjust
