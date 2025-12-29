@@ -225,8 +225,8 @@ const CalendarHub = ({
                             bgClass = theme.range;
                             textClass = '';
                         } else if (isToday) {
-                            bgClass = 'bg-gray-100';
-                            textClass = 'text-gray-900';
+                            bgClass = 'ring-2 ring-amber-400 bg-amber-50';
+                            textClass = 'text-amber-700 font-bold';
                         }
 
                         const customContent = customDayContent ? customDayContent(day) : null;

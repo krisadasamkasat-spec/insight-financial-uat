@@ -145,7 +145,18 @@ const ProjectModal = ({
     };
 
     const handleFieldChange = (name, value) => {
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData(prev => {
+            const newData = { ...prev, [name]: value };
+
+            // If startDate changes and endDate is now before it, clear endDate
+            if (name === 'startDate' && value && prev.endDate) {
+                if (new Date(value) > new Date(prev.endDate)) {
+                    newData.endDate = '';
+                }
+            }
+
+            return newData;
+        });
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
         }

@@ -169,8 +169,13 @@ const Expenses = () => {
             return acc;
         }, {});
 
-        // 2. Sort dates descending
-        const sortedDates = Object.keys(byDate).sort((a, b) => new Date(b) - new Date(a));
+        // 2. Sort dates ascending (nearest date first - เรียงจากวันใกล้สุดไปไกลสุด)
+        const sortedDates = Object.keys(byDate).sort((a, b) => {
+            // Handle 'No Date' specially - put at the end
+            if (a === 'No Date') return 1;
+            if (b === 'No Date') return -1;
+            return new Date(a) - new Date(b);
+        });
 
         // 3. Structure for display - Direct expenses (no project grouping)
         return sortedDates.map(date => {
