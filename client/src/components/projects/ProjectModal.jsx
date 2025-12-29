@@ -148,11 +148,9 @@ const ProjectModal = ({
         setFormData(prev => {
             const newData = { ...prev, [name]: value };
 
-            // If startDate changes and endDate is now before it, clear endDate
-            if (name === 'startDate' && value && prev.endDate) {
-                if (new Date(value) > new Date(prev.endDate)) {
-                    newData.endDate = '';
-                }
+            // If startDate changes, auto-set endDate to same date (user can change later)
+            if (name === 'startDate' && value) {
+                newData.endDate = value;
             }
 
             return newData;
