@@ -19,12 +19,18 @@ async function runMigration() {
         if (tablesExist) {
             console.log('✅ Database tables already exist. Checking seed data...');
 
-            // Ensure default user exists
-            await db.query(`
-                INSERT INTO users (id, username, email, full_name, is_active) VALUES
-                (1, 'system', 'system@insight-financial.com', 'System User', TRUE)
-                ON CONFLICT (id) DO NOTHING
-            `);
+            // Ensure default user exists (with explicit sequence handling)
+            try {
+                await db.query(`
+                    INSERT INTO users (id, username, email, full_name, is_active) 
+                    OVERRIDING SYSTEM VALUE
+                    VALUES (1, 'system', 'system@insight-financial.com', 'System User', TRUE)
+                    ON CONFLICT (id) DO NOTHING
+                `);
+                console.log('✅ Default user verified.');
+            } catch (userErr) {
+                console.log('⚠️ User seed skipped (may already exist):', userErr.message);
+            }
 
             // Clean up any whitespace in project codes
             await db.query(`UPDATE projects SET project_code = TRIM(project_code) WHERE project_code != TRIM(project_code)`);

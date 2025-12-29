@@ -4,6 +4,7 @@ import Summary from '../components/finance/Summary';
 import ApproveConfirmModal from '../components/finance/ApproveConfirmModal';
 import { projectAPI } from '../services/api';
 import { formatNumber } from '../utils/formatters';
+import { useToast } from '../contexts/ToastContext';
 
 const MONTHS = [
     "January", "February", "March", "April", "May", "June",
@@ -11,6 +12,7 @@ const MONTHS = [
 ];
 
 const Expenses = () => {
+    const toast = useToast();
     const [expenses, setExpenses] = useState([]);
     const [incomes, setIncomes] = useState([]); // Add incomes state
     const [projectMap, setProjectMap] = useState({});
@@ -325,10 +327,10 @@ const Expenses = () => {
 
             setIsApproveModalOpen(false);
             setSelectedExpenses(new Set());
-            alert("Approve successful!"); // Or Toast
+            toast.success("อนุมัติเบิกจ่ายสำเร็จ!");
         } catch (err) {
             console.error("Failed to approve", err);
-            alert("Failed to approve expenses");
+            toast.error("ไม่สามารถอนุมัติรายการได้");
         }
     };
 
