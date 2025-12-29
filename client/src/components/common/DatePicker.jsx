@@ -96,6 +96,8 @@ const DatePicker = ({
                             minDate={minDateObj}
                             size="sm"
                             colorTheme={colorTheme}
+                            initialMonth={selectedDate || minDateObj}
+                            showTodayIndicator={true}
                         />
                     </div>
                 )}
