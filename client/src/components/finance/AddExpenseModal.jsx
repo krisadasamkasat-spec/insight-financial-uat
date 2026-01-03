@@ -2,27 +2,36 @@ import React, { useState, useRef, useEffect } from 'react';
 import Modal from '../common/Modal';
 import FormDropdown from '../common/FormDropdown';
 import DatePicker from '../common/DatePicker';
-// import { expenseCodes } from '../data/expenseCodes'; // Removed
-import { projectAPI } from '../../services/api'; // Import projectAPI
-import { ChevronDown, Upload, File, X, Plus, Calculator } from 'lucide-react';
+import { projectAPI } from '../../services/api';
+import { ChevronDown, Upload, File, X, Plus, Calculator, FileText, CreditCard, Building2, User } from 'lucide-react';
 
 const AddExpenseModal = ({ isOpen, onClose, onSubmit, projectCode }) => {
-    // Get today's date in YYYY-MM-DD format
+    // Get today's date
     const [today] = useState(() => new Date().toISOString().split('T')[0]);
 
-    // Expense Code State
-    const [expenseCodes, setExpenseCodes] = useState([]);
+    // Account Codes State
+    const [accountCodes, setAccountCodes] = useState([]);
 
     const [formData, setFormData] = useState({
-        expenseCode: '',
-        description: '',
-        recipient: '',
-        paymentDate: '',
-        taxBase: '',
+        categoryType: 'วางบิล',
+        accountCode: '',
+        billHeader: '',
+        contact: '',
+        paybackTo: '',
+        bankName: '',
+        bankAccountNumber: '',
+        bankAccountName: '',
+        phone: '',
+        email: '',
+        issueDate: new Date().toISOString().split('T')[0],
+        dueDate: '',
+        amount: '',
+        discount: '',
         hasVat: false,
         hasWht: false,
         whtRate: 3,
-        status: 'วางบิล'
+        note: '',
+        status: 'ส่งเบิกแล้ว รอเอกสารตัวจริง'
     });
 
     const [attachments, setAttachments] = useState([]);
@@ -33,36 +42,40 @@ const AddExpenseModal = ({ isOpen, onClose, onSubmit, projectCode }) => {
     // WHT Rate options
     const whtRateOptions = [1, 2, 3, 5];
 
-    // Primary Account State
-    const [primaryAccount, setPrimaryAccount] = useState(null);
+    const bankOptions = [
+        { value: '', label: 'เลือกธนาคาร...' },
+        { value: 'กสิกรไทย', label: 'กสิกรไทย' },
+        { value: 'ไทยพาณิชย์', label: 'ไทยพาณิชย์' },
+        { value: 'กรุงเทพ', label: 'กรุงเทพ' },
+        { value: 'กรุงไทย', label: 'กรุงไทย' },
+        { value: 'ทหารไทยธนชาติ', label: 'ทหารไทยธนชาติ' },
+        { value: 'กรุงศรี', label: 'กรุงศรี' },
+        { value: 'ออมสิน', label: 'ออมสิน' },
+        { value: 'อื่นๆ', label: 'อื่นๆ' }
+    ];
 
-    // Fetch primary account on mount
+    const statusOptions = [
+        { value: 'ส่งเบิกแล้ว รอเอกสารตัวจริง', label: 'ส่งเบิกแล้ว รอเอกสารตัวจริง' },
+        { value: 'บัญชีตรวจ และ ได้รับเอกสารตัวจริง', label: 'บัญชีตรวจ และ ได้รับเอกสารตัวจริง' },
+        { value: 'VP อนุมัติแล้ว ส่งเบิกได้', label: 'VP อนุมัติแล้ว ส่งเบิกได้' },
+        { value: 'ส่งเข้า PEAK', label: 'ส่งเข้า PEAK' },
+        { value: 'โอนแล้ว รอส่งหลักฐาน', label: 'โอนแล้ว รอส่งหลักฐาน' },
+        { value: 'ส่งหลักฐานแล้ว เอกสารครบ', label: 'ส่งหลักฐานแล้ว เอกสารครบ' },
+        { value: 'reject ยกเลิก / รอแก้ไข', label: 'reject ยกเลิก / รอแก้ไข' }
+    ];
+
+    // Fetch Account Codes
     useEffect(() => {
-        const fetchPrimaryAccount = async () => {
+        const fetchAccountCodes = async () => {
             try {
-                // We could optimise this by having a specific endpoint or just filtering client-side
-                const accounts = await projectAPI.getAllAccounts();
-                const primary = accounts.data.find(acc => acc.is_primary);
-                setPrimaryAccount(primary);
+                const res = await projectAPI.getAccountCodes();
+                setAccountCodes(res.data);
             } catch (err) {
-                console.error('Failed to fetch primary account:', err);
+                console.error('Failed to fetch account codes:', err);
             }
         };
-        fetchPrimaryAccount();
-    }, []);
-
-    // Fetch Expense Codes on mount
-    useEffect(() => {
-        const fetchExpenseCodes = async () => {
-            try {
-                const res = await projectAPI.getExpenseCodes();
-                setExpenseCodes(res.data);
-            } catch (err) {
-                console.error('Failed to fetch expense codes:', err);
-            }
-        };
-        fetchExpenseCodes();
-    }, []);
+        if (isOpen) fetchAccountCodes();
+    }, [isOpen]);
 
     // Close WHT dropdown when clicking outside
     useEffect(() => {
@@ -75,27 +88,15 @@ const AddExpenseModal = ({ isOpen, onClose, onSubmit, projectCode }) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Get title from expense code
-    const getExpenseTitle = (code) => {
-        const codeInfo = expenseCodes.find(c => c.code === code);
-        return codeInfo ? codeInfo.title : '';
-    };
-
     // Calculate amounts
     const calculateAmounts = () => {
-        const taxBase = parseFloat(formData.taxBase) || 0;
-        const vatAmount = formData.hasVat ? taxBase * 0.07 : 0;
-        const whtAmount = formData.hasWht ? taxBase * (formData.whtRate / 100) : 0;
-        const totalBeforeWht = taxBase + vatAmount;
-        const netPayment = totalBeforeWht - whtAmount;
-
-        return {
-            taxBase,
-            vatAmount,
-            whtAmount,
-            totalBeforeWht,
-            netPayment
-        };
+        const amount = parseFloat(formData.amount) || 0;
+        const discount = parseFloat(formData.discount) || 0;
+        const subTotal = Math.max(0, amount - discount);
+        const vatAmount = formData.hasVat ? subTotal * 0.07 : 0;
+        const whtAmount = formData.hasWht ? subTotal * (formData.whtRate / 100) : 0;
+        const netPayment = subTotal + vatAmount - whtAmount;
+        return { amount, discount, subTotal, vatAmount, whtAmount, netPayment };
     };
 
     const amounts = calculateAmounts();
@@ -116,16 +117,12 @@ const AddExpenseModal = ({ isOpen, onClose, onSubmit, projectCode }) => {
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
         }
-        // Auto-fill description when expense code changes
-        if (name === 'expenseCode') {
-            const title = getExpenseTitle(value);
-            setFormData(prev => ({ ...prev, [name]: value, description: title }));
-        }
     };
 
     const handleFileChange = (e) => {
         const files = Array.from(e.target.files);
         const newAttachments = files.map(file => ({
+            file: file, // Store actual file object
             name: file.name,
             size: file.size,
             type: file.type
@@ -139,11 +136,9 @@ const AddExpenseModal = ({ isOpen, onClose, onSubmit, projectCode }) => {
 
     const validate = () => {
         const newErrors = {};
-        if (!formData.expenseCode) newErrors.expenseCode = 'กรุณาเลือกรหัสค่าใช้จ่าย';
-        if (!formData.recipient.trim()) newErrors.recipient = 'กรุณากรอกผู้รับเงิน';
-        if (!formData.paymentDate) newErrors.paymentDate = 'กรุณาเลือกวันที่จ่าย';
-        if (!formData.taxBase || parseFloat(formData.taxBase) <= 0) newErrors.taxBase = 'กรุณากรอกจำนวนเงิน';
-
+        if (!formData.accountCode) newErrors.accountCode = 'กรุณาเลือกรหัสค่าใช้จ่าย';
+        if (!formData.billHeader?.trim()) newErrors.billHeader = 'กรุณากรอกหัวบิล';
+        if (!formData.amount || parseFloat(formData.amount) <= 0) newErrors.amount = 'กรุณาระบุจำนวนเงิน';
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -151,88 +146,74 @@ const AddExpenseModal = ({ isOpen, onClose, onSubmit, projectCode }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (validate()) {
-            const { taxBase, vatAmount, whtAmount, netPayment } = calculateAmounts();
+            const reportDate = formData.dueDate || formData.issueDate || new Date().toISOString().split('T')[0];
+            const reportMonth = reportDate.substring(0, 7);
 
             const newExpense = {
-                // eslint-disable-next-line react-hooks/purity
-                id: Date.now(),
-                projectCode: projectCode,
-                expenseCode: formData.expenseCode,
-                title: getExpenseTitle(formData.expenseCode),
-                description: formData.description,
-                status: formData.status,
-                statusColor: formData.status === 'วางบิล' ? 'green' :
-                    formData.status === 'จ่ายแล้ว' ? 'green' : 'blue',
-                company: 'บริษัทคอมมอนกราวด์ ประเทศไทย จำกัด',
-                recipient: formData.recipient,
-                issueDate: today,
-                paymentDate: formData.paymentDate,
-                taxBase: taxBase,
-                netAmount: netPayment,
-                priceAmount: taxBase,
-                vat: formData.hasVat ? 7 : 0,
-                vatAmount: vatAmount,
-                hasWht: formData.hasWht,
-                whtRate: formData.hasWht ? formData.whtRate : 0,
-                wht: whtAmount,
-                currency: 'THB',
-                attachments: attachments,
-                account_id: (formData.status === 'จ่ายแล้ว' && primaryAccount) ? primaryAccount.id : null
+                project_code: projectCode,
+                account_code: formData.accountCode,
+                expense_type: formData.categoryType,
+                description: formData.note,
+                contact: formData.contact || formData.billHeader,
+                bill_header: formData.billHeader,
+                payback_to: formData.paybackTo || formData.contact || formData.billHeader,
+                bank_name: formData.bankName,
+                bank_account_number: formData.bankAccountNumber,
+                bank_account_name: formData.bankAccountName,
+                phone: formData.phone,
+                email: formData.email,
+                price: amounts.amount,
+                discount: amounts.discount,
+                vat_amount: amounts.vatAmount,
+                wht_amount: amounts.whtAmount,
+                net_amount: amounts.netPayment,
+                due_date: formData.dueDate || null,
+                internal_status: formData.status,
+                peak_status: null,
+                report_month: reportMonth
             };
-            onSubmit(newExpense);
+            onSubmit(newExpense, attachments.map(a => a.file));
             handleClose();
         }
     };
 
     const handleClose = () => {
         setFormData({
-            expenseCode: '',
-            description: '',
-            recipient: '',
-            paymentDate: '',
-            taxBase: '',
+            categoryType: 'วางบิล',
+            accountCode: '',
+            billHeader: '',
+            contact: '',
+            paybackTo: '',
+            bankName: '',
+            bankAccountNumber: '',
+            bankAccountName: '',
+            phone: '',
+            email: '',
+            issueDate: new Date().toISOString().split('T')[0],
+            dueDate: '',
+            amount: '',
+            discount: '',
             hasVat: false,
             hasWht: false,
             whtRate: 3,
-            status: 'วางบิล'
+            note: '',
+            status: 'ส่งเบิกแล้ว รอเอกสารตัวจริง'
         });
         setAttachments([]);
         setErrors({});
         onClose();
     };
 
-    const inputClass = (fieldName) => `w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all ${errors[fieldName] ? 'border-red-300 bg-red-50' : 'border-gray-200'}`;
+    const inputClass = (fieldName) => `w-full px-3 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors[fieldName] ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`;
+    const sectionClass = "bg-gradient-to-br from-white to-gray-50/50 rounded-2xl p-5 border border-gray-100 shadow-sm";
+    const sectionHeaderClass = "flex items-center gap-2 mb-4";
+    const sectionIconClass = "w-8 h-8 rounded-lg flex items-center justify-center";
+    const labelClass = "block text-xs font-medium text-gray-600 mb-1.5";
 
-    // Prepare expense code options
-    const expenseCodeOptions = expenseCodes.map(code => ({
+    const accountCodeOptions = accountCodes.map(code => ({
         value: code.code,
         label: `${code.code} - ${code.title.substring(0, 25)}${code.title.length > 25 ? '...' : ''}`
     }));
-
-    const [statusOptions, setStatusOptions] = useState([]);
-
-    // Fetch Statuses on mount
-    useEffect(() => {
-        const fetchStatuses = async () => {
-            try {
-                const res = await projectAPI.getFinancialStatuses('expense');
-                const options = res.data.map(s => ({
-                    value: s.value,
-                    label: s.label
-                }));
-                setStatusOptions(options);
-            } catch (err) {
-                console.error('Failed to fetch expense statuses:', err);
-                // Fallback
-                setStatusOptions([
-                    { value: 'วางบิล', label: 'วางบิล' },
-                    { value: 'สำรองจ่าย', label: 'สำรองจ่าย' },
-                    { value: 'จ่ายแล้ว', label: 'จ่ายแล้ว' }
-                ]);
-            }
-        };
-        fetchStatuses();
-    }, []);
 
     const formatFileSize = (bytes) => {
         if (bytes < 1024) return bytes + ' B';
@@ -240,307 +221,272 @@ const AddExpenseModal = ({ isOpen, onClose, onSubmit, projectCode }) => {
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     };
 
-    const formatNumber = (num) => {
-        return num.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    };
+    const formatNumber = (num) => num.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     return (
-        <Modal isOpen={isOpen} onClose={handleClose} title="เพิ่มรายจ่าย" size="lg">
-            <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Project Code (read-only) */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">รหัสโปรเจค</label>
-                    <input
-                        type="text"
-                        value={projectCode}
-                        readOnly
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500 font-mono"
-                    />
-                </div>
-
-                {/* Expense Code - Single dropdown that serves as description */}
-                <div>
-                    <FormDropdown
-                        label="รหัสค่าใช้จ่าย *"
-                        value={formData.expenseCode}
-                        options={expenseCodeOptions}
-                        onChange={(val) => handleFieldChange('expenseCode', val)}
-                        hasError={!!errors.expenseCode}
-                        colorTheme="red"
-                    />
-                    {errors.expenseCode && <p className="text-red-500 text-xs mt-1">{errors.expenseCode}</p>}
-                </div>
-
-                {/* Description - Auto-filled from expense code */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">รายละเอียด</label>
-                    <input
-                        type="text"
-                        value={formData.description}
-                        readOnly
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500"
-                    />
-                </div>
-
-                {/* Recipient */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">ผู้รับเงิน *</label>
-                    <input
-                        type="text"
-                        name="recipient"
-                        value={formData.recipient}
-                        onChange={handleChange}
-                        className={inputClass('recipient')}
-                    />
-                    {errors.recipient && <p className="text-red-500 text-xs mt-1">{errors.recipient}</p>}
-                </div>
-
-                {/* Payment Date */}
-                <div>
-                    <DatePicker
-                        label="วันที่จ่าย *"
-                        value={formData.paymentDate}
-                        onChange={(val) => handleFieldChange('paymentDate', val)}
-                        hasError={!!errors.paymentDate}
-                        colorTheme="red"
-                        dropUp
-                    />
-                    {errors.paymentDate && <p className="text-red-500 text-xs mt-1">{errors.paymentDate}</p>}
-                </div>
-
-                {/* Tax Base and Status */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">ราคาก่อน VAT (Tax Base) *</label>
-                        <input
-                            type="number"
-                            name="taxBase"
-                            value={formData.taxBase}
-                            onChange={handleChange}
-                            placeholder="0.00"
-                            className={inputClass('taxBase')}
-                        />
-                        {errors.taxBase && <p className="text-red-500 text-xs mt-1">{errors.taxBase}</p>}
-                    </div>
-                    <FormDropdown
-                        label="สถานะ *"
-                        value={formData.status}
-                        options={statusOptions}
-                        onChange={(val) => handleFieldChange('status', val)}
-                        colorTheme="red"
-                    />
-                </div>
-
-                {/* Account Info (Auto-Linked) */}
-                {formData.status === 'จ่ายแล้ว' && primaryAccount && (
-                    <div className="bg-blue-50 px-4 py-3 rounded-lg border border-blue-100 flex items-center justify-between">
-                        <span className="text-sm text-blue-700 font-medium">Payment via:</span>
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                            <span className="text-sm text-blue-900 font-bold">{primaryAccount.name} ({primaryAccount.bank_code?.toUpperCase()})</span>
-                        </div>
-                    </div>
-                )}
-
-                {/* Tax Options Section */}
-                <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                    <div className="flex items-center gap-2 mb-3">
-                        <Calculator className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm font-medium text-gray-700">ตัวเลือกภาษี</span>
-                    </div>
-
-                    <div className="space-y-3">
-                        {/* VAT 7% Checkbox */}
-                        <label className="flex items-center gap-3 cursor-pointer group">
-                            <div className="relative">
-                                <input
-                                    type="checkbox"
-                                    name="hasVat"
-                                    checked={formData.hasVat}
-                                    onChange={handleChange}
-                                    className="sr-only peer"
-                                />
-                                <div className="w-5 h-5 border-2 border-gray-300 rounded transition-all peer-checked:border-red-500 peer-checked:bg-red-500 group-hover:border-gray-400">
-                                    {formData.hasVat && (
-                                        <svg className="w-full h-full text-white p-0.5" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                        </svg>
-                                    )}
-                                </div>
-                            </div>
-                            <span className="text-sm text-gray-700">VAT 7%</span>
-                            {formData.hasVat && formData.taxBase && (
-                                <span className="text-sm text-gray-500 ml-auto">
-                                    +{formatNumber(amounts.vatAmount)} บาท
-                                </span>
-                            )}
-                        </label>
-
-                        {/* WHT Checkbox with MinimalDropdown */}
-                        <div className="flex items-center gap-3">
-                            <label className="flex items-center gap-3 cursor-pointer group">
-                                <div className="relative">
-                                    <input
-                                        type="checkbox"
-                                        name="hasWht"
-                                        checked={formData.hasWht}
-                                        onChange={handleChange}
-                                        className="sr-only peer"
-                                    />
-                                    <div className="w-5 h-5 border-2 border-gray-300 rounded transition-all peer-checked:border-red-500 peer-checked:bg-red-500 group-hover:border-gray-400">
-                                        {formData.hasWht && (
-                                            <svg className="w-full h-full text-white p-0.5" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                            </svg>
-                                        )}
-                                    </div>
-                                </div>
-                                <span className="text-sm text-gray-700">หัก ณ ที่จ่าย</span>
-                            </label>
-
-                            {/* WHT Rate MinimalDropdown */}
-                            {formData.hasWht && (
-                                <div className="relative" ref={whtDropdownRef}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsWhtDropdownOpen(!isWhtDropdownOpen)}
-                                        className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg border transition-all ${isWhtDropdownOpen
-                                            ? 'text-gray-900 border-gray-400 bg-white'
-                                            : 'text-gray-600 border-gray-300 hover:border-gray-400 bg-white'
-                                            }`}
-                                    >
-                                        <span className="font-medium">{formData.whtRate}%</span>
-                                        <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${isWhtDropdownOpen ? 'rotate-180' : ''}`} />
-                                    </button>
-
-                                    {isWhtDropdownOpen && (
-                                        <div className="absolute top-full left-0 mt-1 min-w-[80px] bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50 overflow-hidden">
-                                            {whtRateOptions.map(rate => (
-                                                <button
-                                                    key={rate}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setFormData(prev => ({ ...prev, whtRate: rate }));
-                                                        setIsWhtDropdownOpen(false);
-                                                    }}
-                                                    className={`w-full text-left px-4 py-2 text-sm transition-colors ${formData.whtRate === rate
-                                                        ? 'bg-red-500 text-white'
-                                                        : 'text-gray-700 hover:bg-gray-100'
-                                                        }`}
-                                                >
-                                                    {rate}%
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {formData.hasWht && formData.taxBase && (
-                                <span className="text-sm text-gray-500 ml-auto">
-                                    -{formatNumber(amounts.whtAmount)} บาท
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Tax Calculation Summary */}
-                {formData.taxBase && parseFloat(formData.taxBase) > 0 && (
-                    <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-4 border border-slate-200">
-                        <div className="flex items-center gap-2 mb-3">
-                            <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center">
-                                <Calculator className="w-3.5 h-3.5 text-slate-600" />
-                            </div>
-                            <span className="text-sm font-semibold text-slate-700">สรุปการคำนวณ</span>
-                        </div>
-
-                        <div className="space-y-2 text-sm">
-                            <div className="flex justify-between text-gray-600">
-                                <span>ราคาก่อน VAT (Tax Base)</span>
-                                <span>{formatNumber(amounts.taxBase)} บาท</span>
-                            </div>
-
-                            {formData.hasVat && (
-                                <div className="flex justify-between text-gray-600">
-                                    <span>VAT 7%</span>
-                                    <span className="text-emerald-600">+{formatNumber(amounts.vatAmount)} บาท</span>
-                                </div>
-                            )}
-
-                            {(formData.hasVat || formData.hasWht) && (
-                                <div className="flex justify-between text-gray-600">
-                                    <span>รวมก่อนหัก ณ ที่จ่าย</span>
-                                    <span>{formatNumber(amounts.totalBeforeWht)} บาท</span>
-                                </div>
-                            )}
-
-                            {formData.hasWht && (
-                                <div className="flex justify-between text-gray-600">
-                                    <span>หัก ณ ที่จ่าย ({formData.whtRate}%)</span>
-                                    <span className="text-red-500">-{formatNumber(amounts.whtAmount)} บาท</span>
-                                </div>
-                            )}
-
-                            <div className="pt-2 mt-2 border-t border-slate-200">
-                                <div className="flex justify-between font-semibold">
-                                    <span className="text-slate-700">ยอดจ่ายสุทธิ (Net Payment)</span>
-                                    <span className="text-lg text-slate-900">{formatNumber(amounts.netPayment)} บาท</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* File Attachments */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">เอกสารแนบ</label>
-                    <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 hover:border-red-300 transition-colors">
-                        <input
-                            type="file"
-                            multiple
-                            onChange={handleFileChange}
-                            className="hidden"
-                            id="expense-attachments"
-                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
-                        />
-                        <label htmlFor="expense-attachments" className="flex flex-col items-center cursor-pointer">
-                            <Upload className="w-6 h-6 text-gray-400" />
-                            <span className="text-sm text-gray-500 mt-1">คลิกเพื่อเลือกไฟล์</span>
-                            <span className="text-xs text-gray-400">PDF, รูปภาพ, Word, Excel</span>
-                        </label>
-                    </div>
-                    {attachments.length > 0 && (
-                        <div className="mt-2 space-y-1">
-                            {attachments.map((file, idx) => (
-                                <div key={idx} className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg">
-                                    <div className="flex items-center gap-2">
-                                        <File className="w-4 h-4 text-gray-500" />
-                                        <span className="text-sm text-gray-700">{file.name}</span>
-                                        <span className="text-xs text-gray-400">({formatFileSize(file.size)})</span>
-                                    </div>
-                                    <button type="button" onClick={() => removeAttachment(idx)} className="text-gray-400 hover:text-red-500">
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+        <Modal isOpen={isOpen} onClose={handleClose} title="บันทึกค่าใช้จ่ายใหม่" size="2xl">
+            <form onSubmit={handleSubmit}>
+                {/* === ปุ่มเลือกประเภท (Header) === */}
+                <div className="flex gap-2 mb-5">
                     <button
                         type="button"
-                        onClick={handleClose}
-                        className="px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        onClick={() => setFormData(prev => ({ ...prev, categoryType: 'วางบิล' }))}
+                        className={`flex items-center justify-center gap-2 py-2.5 px-5 rounded-lg border-2 transition-all text-sm ${formData.categoryType === 'วางบิล' ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm' : 'border-gray-200 hover:border-gray-300 bg-white text-gray-600'}`}
                     >
-                        ยกเลิก
+                        <Building2 className="w-4 h-4" />
+                        <span className="font-medium">วางบิล</span>
                     </button>
                     <button
-                        type="submit"
-                        className="px-5 py-2.5 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, categoryType: 'เบิกที่สำรองจ่าย' }))}
+                        className={`flex items-center justify-center gap-2 py-2.5 px-5 rounded-lg border-2 transition-all text-sm ${formData.categoryType === 'เบิกที่สำรองจ่าย' ? 'border-orange-500 bg-orange-50 text-orange-700 shadow-sm' : 'border-gray-200 hover:border-gray-300 bg-white text-gray-600'}`}
                     >
+                        <User className="w-4 h-4" />
+                        <span className="font-medium">เบิกคืน</span>
+                    </button>
+                </div>
+
+                {/* === 3-Column Grid Layout === */}
+                <div className="grid grid-cols-3 gap-5">
+
+                    {/* ========== COLUMN 1: ข้อมูลรายการ + ผู้รับเงิน ========== */}
+                    <div className="space-y-4">
+                        {/* === Section 1: ข้อมูลรายการ === */}
+                        <div className={sectionClass}>
+                            <div className={sectionHeaderClass}>
+                                <div className={`${sectionIconClass} bg-blue-100`}>
+                                    <FileText className="w-4 h-4 text-blue-600" />
+                                </div>
+                                <span className="text-sm font-semibold text-gray-700">ข้อมูลรายการ</span>
+                            </div>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className={labelClass}>รหัสโปรเจค</label>
+                                    <input type="text" value={projectCode || '-'} readOnly className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500 font-mono" />
+                                </div>
+                                <div>
+                                    <FormDropdown label="รหัสค่าใช้จ่าย *" value={formData.accountCode} options={accountCodeOptions} onChange={(val) => handleFieldChange('accountCode', val)} hasError={!!errors.accountCode} colorTheme="blue" />
+                                    {errors.accountCode && <p className="text-red-500 text-xs mt-1">{errors.accountCode}</p>}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* === Section 2: ผู้รับเงิน === */}
+                        <div className={sectionClass}>
+                            <div className={sectionHeaderClass}>
+                                <div className={`${sectionIconClass} bg-green-100`}>
+                                    <User className="w-4 h-4 text-green-600" />
+                                </div>
+                                <span className="text-sm font-semibold text-gray-700">ผู้รับเงิน</span>
+                            </div>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className={labelClass}>หัวบิล *</label>
+                                    <input type="text" name="billHeader" value={formData.billHeader} onChange={handleChange} className={inputClass('billHeader')} />
+                                    {errors.billHeader && <p className="text-red-500 text-xs mt-1">{errors.billHeader}</p>}
+                                </div>
+                                <div>
+                                    <label className={labelClass}>ผู้ติดต่อ</label>
+                                    <input type="text" name="contact" value={formData.contact} onChange={handleChange} className={inputClass('contact')} />
+                                </div>
+                                {formData.categoryType === 'เบิกที่สำรองจ่าย' && (
+                                    <div>
+                                        <label className={labelClass}>จ่ายคืน *</label>
+                                        <input type="text" name="paybackTo" value={formData.paybackTo} onChange={handleChange} className={inputClass('paybackTo')} />
+                                    </div>
+                                )}
+                                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
+                                    <div>
+                                        <label className={labelClass}>เบอร์โทร</label>
+                                        <input type="text" name="phone" value={formData.phone} onChange={handleChange} className={inputClass('phone')} />
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}>อีเมล</label>
+                                        <input type="text" name="email" value={formData.email} onChange={handleChange} className={inputClass('email')} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ========== COLUMN 2: บัญชีโอน + จำนวนเงิน + ภาษี + วันที่ ========== */}
+                    <div className="space-y-4">
+                        {/* === Section 3: บัญชีสำหรับโอนเงิน === */}
+                        <div className={sectionClass}>
+                            <div className={sectionHeaderClass}>
+                                <div className={`${sectionIconClass} bg-purple-100`}>
+                                    <CreditCard className="w-4 h-4 text-purple-600" />
+                                </div>
+                                <span className="text-sm font-semibold text-gray-700">บัญชีสำหรับโอนเงิน</span>
+                            </div>
+                            <div className="space-y-3">
+                                <FormDropdown label="ธนาคาร" value={formData.bankName} options={bankOptions} onChange={(val) => handleFieldChange('bankName', val)} colorTheme="gray" />
+                                <div>
+                                    <label className={labelClass}>เลขบัญชี</label>
+                                    <input type="text" name="bankAccountNumber" value={formData.bankAccountNumber} onChange={handleChange} className={inputClass('bankAccountNumber')} />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>ชื่อบัญชี</label>
+                                    <input type="text" name="bankAccountName" value={formData.bankAccountName} onChange={handleChange} className={inputClass('bankAccountName')} />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* === จำนวนเงิน และ ส่วนลด === */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className={labelClass}>จำนวนเงิน *</label>
+                                <input type="number" name="amount" value={formData.amount} onChange={handleChange} className={inputClass('amount')} />
+                                {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount}</p>}
+                            </div>
+                            <div>
+                                <label className={`${labelClass} text-gray-400`}>ส่วนลด</label>
+                                <input type="number" name="discount" value={formData.discount} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-300" />
+                            </div>
+                        </div>
+
+                        {/* === ตัวเลือกภาษี (รวม VAT, หัก ณ ที่จ่าย) === */}
+                        <div className="bg-gray-50 rounded-xl p-3 border border-gray-200">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Calculator className="w-4 h-4 text-gray-500" />
+                                <span className="text-xs font-medium text-gray-700">ตัวเลือกภาษี</span>
+                            </div>
+                            <div className="space-y-2">
+                                {/* VAT 7% */}
+                                <label className="flex items-center gap-2 cursor-pointer group">
+                                    <div className="relative">
+                                        <input type="checkbox" name="hasVat" checked={formData.hasVat} onChange={handleChange} className="sr-only peer" />
+                                        <div className="w-4 h-4 border-2 border-gray-300 rounded transition-all peer-checked:border-blue-500 peer-checked:bg-blue-500 group-hover:border-gray-400">
+                                            {formData.hasVat && (
+                                                <svg className="w-full h-full text-white p-0.5" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                </svg>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <span className="text-xs text-gray-700">VAT 7%</span>
+                                    {formData.hasVat && formData.amount && (
+                                        <span className="text-xs text-gray-500 ml-auto">+{formatNumber(amounts.vatAmount)}</span>
+                                    )}
+                                </label>
+
+                                {/* หัก ณ ที่จ่าย */}
+                                <div className="flex items-center gap-2">
+                                    <label className="flex items-center gap-2 cursor-pointer group">
+                                        <div className="relative">
+                                            <input type="checkbox" name="hasWht" checked={formData.hasWht} onChange={handleChange} className="sr-only peer" />
+                                            <div className="w-4 h-4 border-2 border-gray-300 rounded transition-all peer-checked:border-blue-500 peer-checked:bg-blue-500 group-hover:border-gray-400">
+                                                {formData.hasWht && (
+                                                    <svg className="w-full h-full text-white p-0.5" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <span className="text-xs text-gray-700">หัก ณ ที่จ่าย</span>
+                                    </label>
+                                    {formData.hasWht && (
+                                        <div className="relative" ref={whtDropdownRef}>
+                                            <button type="button" onClick={() => setIsWhtDropdownOpen(!isWhtDropdownOpen)} className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-gray-300 bg-white">
+                                                <span className="font-medium">{formData.whtRate}%</span>
+                                                <ChevronDown className={`w-3 h-3 transition-transform ${isWhtDropdownOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+                                            {isWhtDropdownOpen && (
+                                                <div className="absolute top-full left-0 mt-1 min-w-[60px] bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
+                                                    {whtRateOptions.map(rate => (
+                                                        <button key={rate} type="button" onClick={() => { setFormData(prev => ({ ...prev, whtRate: rate })); setIsWhtDropdownOpen(false); }}
+                                                            className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${formData.whtRate === rate ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
+                                                            {rate}%
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    {formData.hasWht && formData.amount && (
+                                        <span className="text-xs text-gray-500 ml-auto">-{formatNumber(amounts.whtAmount)}</span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* สรุปยอด */}
+                            {formData.amount && parseFloat(formData.amount) > 0 && (
+                                <div className="mt-3 pt-2 border-t border-gray-200">
+                                    <div className="flex justify-between font-semibold">
+                                        <span className="text-xs text-gray-700">ยอดจ่ายสุทธิ</span>
+                                        <span className="text-sm text-blue-700">{formatNumber(amounts.netPayment)} บาท</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* === วันที่ === */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <DatePicker label="วันที่เอกสาร" value={formData.issueDate} onChange={(val) => handleFieldChange('issueDate', val)} colorTheme="blue" />
+                            <DatePicker label="วันครบกำหนด" value={formData.dueDate} onChange={(val) => handleFieldChange('dueDate', val)} colorTheme="blue" />
+                        </div>
+                    </div>
+
+                    {/* ========== COLUMN 3: เอกสารแนบ + สถานะ + โน้ต ========== */}
+                    <div className="space-y-4">
+                        {/* === เอกสารแนบ === */}
+                        <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1.5">เอกสารแนบ</label>
+                            <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 hover:border-blue-300 transition-colors">
+                                <input type="file" multiple onChange={handleFileChange} className="hidden" id="expense-attachments" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" />
+                                <label htmlFor="expense-attachments" className="flex flex-col items-center cursor-pointer">
+                                    <Upload className="w-5 h-5 text-gray-400" />
+                                    <span className="text-xs text-gray-500 mt-1">คลิกเพื่อเลือกไฟล์</span>
+                                    <span className="text-[10px] text-gray-400">PDF, รูปภาพ, Word, Excel</span>
+                                </label>
+                            </div>
+                            {attachments.length > 0 && (
+                                <div className="mt-2 space-y-1.5 max-h-32 overflow-y-auto">
+                                    {attachments.map((file, idx) => {
+                                        const isPdf = file.name.toLowerCase().endsWith('.pdf');
+                                        const isImage = /\.(jpg|jpeg|png|gif)$/i.test(file.name);
+                                        const iconBg = isPdf ? 'bg-red-100' : isImage ? 'bg-blue-100' : 'bg-gray-100';
+                                        const iconColor = isPdf ? 'text-red-500' : isImage ? 'text-blue-500' : 'text-gray-500';
+                                        return (
+                                            <div key={idx} className="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`w-7 h-7 ${iconBg} rounded flex items-center justify-center`}>
+                                                        <File className={`w-3.5 h-3.5 ${iconColor}`} />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs font-medium text-gray-700 truncate max-w-[120px]">{file.name}</p>
+                                                        <p className="text-[10px] text-gray-400">{formatFileSize(file.size)}</p>
+                                                    </div>
+                                                </div>
+                                                <button type="button" onClick={() => removeAttachment(idx)} className="w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* === สถานะ === */}
+                        <div>
+                            <FormDropdown label="สถานะ" value={formData.status} options={statusOptions} onChange={(val) => handleFieldChange('status', val)} colorTheme="blue" />
+                        </div>
+
+                        {/* === โน้ต / หมายเหตุ === */}
+                        <div>
+                            <label className={labelClass}>โน้ต / หมายเหตุ</label>
+                            <textarea name="note" value={formData.note} onChange={handleChange} rows="4" className={`${inputClass('note')} resize-none`} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* === ปุ่ม Action (Footer) === */}
+                <div className="flex justify-end gap-3 mt-5 pt-4 border-t border-gray-200">
+                    <button type="button" onClick={handleClose} className="px-5 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" className="px-6 py-2.5 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2">
                         <Plus className="w-4 h-4" />
                         บันทึก
                     </button>

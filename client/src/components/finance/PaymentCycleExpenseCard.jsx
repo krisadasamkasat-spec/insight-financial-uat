@@ -16,6 +16,7 @@ const PaymentCycleExpenseCard = ({
     isSelected,
     onToggle,
     onPaymentCycleChange,
+    onReject,  // NEW: callback for rejection
     isSelectionEnabled = true
 }) => {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -38,9 +39,14 @@ const PaymentCycleExpenseCard = ({
         paymentDate,
         netAmount,
         priceAmount,
-        vatRate,
+        vatAmount,
         whtAmount,
-        createdAt
+        createdAt,
+        // New fields
+        category_type,
+        peak_status,
+        vendor_name,
+        payback_name
     } = data;
 
     // Derived values
@@ -98,104 +104,156 @@ const PaymentCycleExpenseCard = ({
                 <div className="flex gap-4 flex-1">
                     {/* Checkbox */}
                     {isSelectionEnabled && (
-                        <div className="pt-0.5">
+                        <div className="pt-1">
                             <input
                                 type="checkbox"
                                 checked={isSelected || false}
                                 onChange={onToggle}
-                                className="w-4 h-4 rounded border-gray-300 cursor-pointer accent-blue-500"
+                                className="w-5 h-5 rounded border-gray-300 cursor-pointer accent-blue-600 transition-all hover:scale-105"
                             />
                         </div>
                     )}
 
-                    <div className="flex flex-col gap-2 flex-1">
-                        {/* Row 1: Project Code | Project Name */}
-                        <div className="flex items-center gap-2 text-sm">
+                    <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                        {/* Row 1: Project Code | Expense Code | Account Title - BOLD 16px */}
+                        <div className="flex items-center gap-2 flex-wrap">
                             <button
                                 onClick={() => setShowProjectDetails(true)}
-                                className="font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors cursor-pointer"
+                                className="font-bold text-[16px] text-blue-600 hover:text-blue-700 hover:underline transition-colors cursor-pointer"
                             >
                                 {projectCode}
                             </button>
-                            <span className="text-gray-300">|</span>
-                            <span className="text-gray-700 font-medium">
-                                {project?.projectName || project?.project_name || '-'}
-                            </span>
-                        </div>
-
-                        {/* Row 2: Expense Code - Category (รหัสบัญชี) */}
-                        <div className="flex items-center gap-2 text-xs">
-                            <span className="px-2 py-0.5 bg-gray-100 text-gray-600 font-mono rounded">
+                            <span className="text-gray-300 text-[16px]">|</span>
+                            <span className="text-gray-600 font-mono text-[16px] font-semibold">
                                 {expenseCode}
                             </span>
-                            {expenseCategory && (
-                                <span className="text-gray-500">{expenseCategory}</span>
+                            <span className="text-gray-300 text-[16px]">|</span>
+                            <span className="text-gray-600 text-[16px] font-semibold truncate max-w-[250px]" title={data.account_title}>
+                                {data.account_title || '-'}
+                            </span>
+                        </div>
+
+                        {/* Row 2: Description - 12px */}
+                        <div className="text-[12px] text-gray-500 line-clamp-1" title={description}>
+                            {description || '-'}
+                        </div>
+
+                        {/* Row 3: Type Badge + Payback To/Store */}
+                        <div className="flex items-center gap-2 mt-1">
+                            {/* Logic: If expense_type is 'เบิกที่สำรองจ่าย', use Blue badge + User Icon + PaybackTo
+                                      If expense_type is 'วางบิล', use Green badge + Store Icon + Contact */}
+                            {category_type === 'เบิกที่สำรองจ่าย' ? (
+                                <>
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                                        เบิกที่สำรองจ่าย
+                                    </span>
+                                    <div className="flex items-center gap-1.5 text-xs text-gray-700 font-medium">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-500">
+                                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                            <circle cx="12" cy="7" r="4"></circle>
+                                        </svg>
+                                        {/* Show payback_to (person who paid) */}
+                                        {data.payback_to || payback_name || '-'}
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                        วางบิล
+                                    </span>
+                                    <div className="flex items-center gap-1.5 text-xs text-gray-700 font-medium">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-500">
+                                            <path d="M3 21h18" />
+                                            <path d="M5 21V7l8-4 8 4v14" />
+                                            <path d="M17 21v-8H7v8" />
+                                        </svg>
+                                        {/* Show contact (shop name) */}
+                                        {vendor_name || data.contact || '-'}
+                                    </div>
+                                </>
                             )}
                         </div>
 
-                        {/* Row 3: Status | Recipient */}
-                        <div className="flex items-center gap-2 mt-1">
-                            {status ? (
-                                <span className={`px-2.5 py-0.5 rounded text-xs font-medium ${statusColors.bg} ${statusColors.text}`}>
-                                    {status}
-                                </span>
-                            ) : (
-                                <span className="px-2.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                                    รอดำเนินการ
-                                </span>
-                            )}
-                            <span className="text-gray-300">|</span>
-                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                    <circle cx="12" cy="7" r="4"></circle>
-                                </svg>
-                                {recipient || '-'}
-                            </div>
+                        {/* Row 4: Bill Header / Recipient - 12px, format: contact (bold) + (bill_header) */}
+                        <div className="flex items-center gap-1.5 text-[12px] text-gray-500 pl-0.5">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            <span className="truncate max-w-[300px]" title={`${data.contact || ''} (${data.bill_header || ''})`}>
+                                <span className="font-semibold text-gray-700">{data.contact || '-'}</span>
+                                {data.bill_header && <span className="font-normal text-gray-400"> ({data.bill_header})</span>}
+                            </span>
                         </div>
                     </div>
                 </div>
 
                 {/* Right Side - Amounts & Menu */}
-                <div className="flex items-start gap-3">
-                    <div className="flex flex-col gap-1 min-w-[140px] text-right">
-                        <div className="flex justify-between text-sm">
-                            <span className="text-gray-400">Net</span>
-                            <span className="text-red-500 font-bold">{formatNumber(netAmount)}</span>
+                <div className="flex items-stretch gap-4">
+                    {/* Financials Column */}
+                    <div className="flex flex-col items-end justify-start gap-1 min-w-[120px] pt-1">
+                        {/* Net Amount - Red Bold */}
+                        <div className="flex justify-between w-full items-baseline text-sm">
+                            <span className="text-gray-400 text-xs">Net</span>
+                            <span className="text-red-600 font-bold text-base">{formatNumber(netAmount)}</span>
                         </div>
-                        <div className="flex justify-between text-xs">
+
+                        {/* Price */}
+                        <div className="flex justify-between w-full items-baseline text-xs">
                             <span className="text-gray-400">Price</span>
-                            <span className="text-gray-600">{formatNumber(priceAmount)}</span>
+                            <span className="text-gray-600 font-medium">{formatNumber(priceAmount)}</span>
                         </div>
-                        <div className="flex justify-between text-xs">
+
+                        {/* VAT */}
+                        <div className="flex justify-between w-full items-baseline text-xs">
                             <span className="text-gray-400">VAT</span>
-                            <span className="text-gray-600">{vatRate ? `${vatRate}%` : 'N/A'}</span>
+                            <span className="text-gray-600">
+                                {(vatAmount && vatAmount > 0) ? `7% (${formatNumber(vatAmount)})` : 'N/A'}
+                            </span>
                         </div>
-                        <div className="flex justify-between text-xs">
+
+                        {/* WHT */}
+                        <div className="flex justify-between w-full items-baseline text-xs">
                             <span className="text-gray-400">หัก ณ ที่จ่าย</span>
-                            <span className="text-gray-600">{whtAmount ? formatNumber(whtAmount) : 'N/A'}</span>
+                            <span className="text-gray-600">
+                                {(whtAmount && whtAmount > 0) ? formatNumber(whtAmount) : 'N/A'}
+                            </span>
                         </div>
-                        {/* Entry Date (วันที่ลงรายการ) */}
-                        <div className="text-[10px] text-gray-300 mt-1">วันที่ลงรายการ: {formatDate(createdAt || issueDate)}</div>
+
+                        {/* Issue Date - Below WHT */}
+                        <div className="text-[10px] text-gray-400 mt-1 text-right">
+                            Issue Date: {formatDate(issueDate || createdAt)}
+                        </div>
                     </div>
 
-                    {/* Action Icons */}
-                    <div className="flex flex-col items-center gap-1">
-                        {/* Documents Icon with Hover Preview */}
-                        <AttachmentPreview
-                            attachments={data.attachments || []}
-                            onOpenModal={() => setShowDocuments(true)}
-                            size="sm"
-                        />
+                    {/* Actions Column - Icons vertical (column) */}
+                    <div className="flex flex-col items-center justify-start py-1 border-l border-gray-100 pl-3 gap-1">
+                        {/* 1. Reject Icon (NEW) */}
+                        {isSelectionEnabled && onReject && (
+                            <button
+                                onClick={() => onReject(data)}
+                                className="p-1.5 hover:bg-red-50 rounded-lg transition-colors text-gray-400 hover:text-red-500"
+                                title="ไม่อนุมัติรายการนี้"
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                                </svg>
+                            </button>
+                        )}
 
-                        {/* Payment Cycle Change Icon */}
+                        {/* 2. Calendar Icon */}
                         {isSelectionEnabled && (
                             <button
                                 onClick={handleOpenPaymentModal}
-                                className="p-1.5 hover:bg-amber-50 rounded-full transition-colors text-gray-400 hover:text-amber-500 group relative"
+                                className="p-1.5 hover:bg-amber-50 rounded-lg transition-colors text-gray-400 hover:text-amber-500"
                                 title="เปลี่ยนแปลงรอบเบิกจ่าย"
                             >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                                     <line x1="16" y1="2" x2="16" y2="6"></line>
                                     <line x1="8" y1="2" x2="8" y2="6"></line>
@@ -203,6 +261,13 @@ const PaymentCycleExpenseCard = ({
                                 </svg>
                             </button>
                         )}
+
+                        {/* 3. Documents Icon */}
+                        <AttachmentPreview
+                            attachments={data.attachments || []}
+                            onOpenModal={() => setShowDocuments(true)}
+                            size="sm"
+                        />
                     </div>
                 </div>
             </div>

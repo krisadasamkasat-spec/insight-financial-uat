@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Pencil, Trash2, User, Building2 } from 'lucide-react';
-import { projectAPI } from '../../services/api';
+import { Search, Plus, Pencil, Trash2, User, Building2, Upload, File, X, FileText } from 'lucide-react';
+import { projectAPI, API_BASE } from '../../services/api';
 import Modal from '../common/Modal';
 import FormDropdown from '../common/FormDropdown';
 import { useToast } from '../../components/common/ToastProvider';
@@ -13,6 +13,9 @@ const TeamMembersTab = () => {
     const [editingMember, setEditingMember] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [memberDocuments, setMemberDocuments] = useState([]);
+    const [uploadingDoc, setUploadingDoc] = useState(false);
+    const [pendingFiles, setPendingFiles] = useState([]); // Files waiting to be uploaded on save
 
     const bankFormOptions = [
         { value: 'กสิกรไทย', label: 'กสิกรไทย' },
@@ -21,6 +24,13 @@ const TeamMembersTab = () => {
         { value: 'กรุงไทย', label: 'กรุงไทย' },
         { value: 'กรุงศรี', label: 'กรุงศรี' },
         { value: 'ทหารไทยธนชาต', label: 'ทหารไทยธนชาต' },
+    ];
+
+    const memberTypeOptions = [
+        { value: 'full-time', label: 'พนักงานประจำ' },
+        { value: 'part-time', label: 'พนักงานชั่วคราว' },
+        { value: 'freelance', label: 'ฟรีแลนซ์' },
+        { value: 'vendor', label: 'ผู้ขาย/บริษัท' },
     ];
 
     // Fetch members on mount
@@ -40,10 +50,12 @@ const TeamMembersTab = () => {
                 email: m.email || '',
                 phone: m.phone || '',
                 bankAccount: m.bank_account || '',
+                bankAccountName: m.bank_account_name || '',
                 bankName: m.bank_name || 'กสิกรไทย',
                 taxId: m.tax_id || '',
                 isCompany: m.is_company || false,
-                type: m.type || 'Full-time'
+                type: m.type || 'full-time',
+                isActive: m.is_active !== false
             }));
             setTeamMembers(mappedMembers);
         } catch (error) {
@@ -68,18 +80,57 @@ const TeamMembersTab = () => {
             email: '',
             phone: '',
             bankAccount: '',
+            bankAccountName: '',
             bankName: 'กสิกรไทย',
             taxId: '',
             isCompany: false,
-            type: 'Full-time',
+            type: 'full-time',
             isNew: true
         });
+        setMemberDocuments([]);
         setIsModalOpen(true);
     };
 
-    const handleEdit = (member) => {
+    const handleEdit = async (member) => {
         setEditingMember({ ...member, isNew: false });
+        setMemberDocuments([]);
         setIsModalOpen(true);
+        // Fetch existing documents
+        try {
+            const res = await projectAPI.getMemberDocuments(member.id);
+            setMemberDocuments(res.data);
+        } catch (err) {
+            console.error('Error fetching member documents:', err);
+        }
+    };
+
+    const handleUploadDocument = async () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.pdf,.jpg,.jpeg,.png';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            // Store file in pending state instead of uploading immediately
+            setPendingFiles(prev => [...prev, file]);
+            toast.success(`เพิ่มไฟล์ "${file.name}" (รอบันทึก)`);
+        };
+        input.click();
+    };
+
+    const handleRemovePendingFile = (index) => {
+        setPendingFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleDeleteDocument = async (docId) => {
+        try {
+            await projectAPI.deleteMemberDocument(docId);
+            setMemberDocuments(prev => prev.filter(d => d.id !== docId));
+            toast.success('ลบเอกสารสำเร็จ');
+        } catch (err) {
+            console.error('Delete error:', err);
+            toast.error('ลบเอกสารไม่สำเร็จ');
+        }
     };
 
     const handleSave = async () => {
@@ -91,22 +142,44 @@ const TeamMembersTab = () => {
                 email: editingMember.email,
                 phone: editingMember.phone,
                 bank_account: editingMember.bankAccount,
+                bank_account_name: editingMember.bankAccountName,
                 bank_name: editingMember.bankName,
                 tax_id: editingMember.taxId,
                 is_company: editingMember.isCompany,
-                type: editingMember.type || 'Full-time'
+                type: editingMember.type || 'full-time'
             };
 
+            let memberId = editingMember.id;
+
             if (editingMember.isNew) {
-                await projectAPI.createMember(payload);
+                const res = await projectAPI.createMember(payload);
+                memberId = res.data.id;
                 toast.success('เพิ่มสมาชิกสำเร็จ');
             } else {
                 await projectAPI.updateMember(editingMember.id, payload);
                 toast.success('อัปเดตข้อมูลสำเร็จ');
             }
+
+            // Upload pending files if any
+            if (pendingFiles.length > 0 && memberId) {
+                setUploadingDoc(true);
+                for (const file of pendingFiles) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        formData.append('doc_type', 'document');
+                        await projectAPI.uploadMemberDocument(memberId, formData);
+                    } catch (err) {
+                        console.error('Upload error for file:', file.name, err);
+                    }
+                }
+                setUploadingDoc(false);
+            }
+
             fetchMembers(); // Reload list
             setIsModalOpen(false);
             setEditingMember(null);
+            setPendingFiles([]);
         } catch (error) {
             console.error('Error saving member:', error);
             toast.error('บันทึกข้อมูลไม่สำเร็จ');
@@ -292,6 +365,17 @@ const TeamMembersTab = () => {
                             </div>
                         </div>
 
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อบัญชี</label>
+                            <input
+                                type="text"
+                                value={editingMember.bankAccountName}
+                                onChange={(e) => setEditingMember(prev => ({ ...prev, bankAccountName: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="ชื่อเจ้าของบัญชี"
+                            />
+                        </div>
+
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">เลขประจำตัวผู้เสียภาษี</label>
@@ -303,7 +387,12 @@ const TeamMembersTab = () => {
                                     placeholder="1-xxxx-xxxxx-xx-x"
                                 />
                             </div>
-
+                            <FormDropdown
+                                label="ประเภทบุคคล"
+                                value={editingMember.type}
+                                options={memberTypeOptions}
+                                onChange={(value) => setEditingMember(prev => ({ ...prev, type: value }))}
+                            />
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -317,6 +406,81 @@ const TeamMembersTab = () => {
                             <label htmlFor="isCompany" className="text-sm text-gray-700">นิติบุคคล (บริษัท)</label>
                         </div>
 
+                        {/* Documents Section */}
+                        <>
+                            <hr className="my-4" />
+                            <div className="flex items-center justify-between mb-3">
+                                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                    <FileText className="w-4 h-4" /> เอกสารแนบ
+                                    {uploadingDoc && <span className="text-xs text-blue-500 animate-pulse">กำลังอัพโหลด...</span>}
+                                </h4>
+                                <button
+                                    type="button"
+                                    onClick={() => handleUploadDocument()}
+                                    disabled={uploadingDoc}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg border border-blue-200 disabled:opacity-50 transition-colors"
+                                >
+                                    <Upload className="w-3.5 h-3.5" /> เพิ่มไฟล์
+                                </button>
+                            </div>
+
+                            {/* Pending Files (not yet uploaded) */}
+                            {pendingFiles.length > 0 && (
+                                <div className="space-y-2 mb-2">
+                                    {pendingFiles.map((file, index) => (
+                                        <div key={index} className="flex items-center justify-between p-2.5 bg-yellow-50 rounded-lg border border-yellow-200">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <File className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                                                <span className="text-sm text-gray-700 truncate">{file.name}</span>
+                                                <span className="text-xs text-yellow-600 bg-yellow-100 px-1.5 py-0.5 rounded">รอบันทึก</span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemovePendingFile(index)}
+                                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                                                title="ลบ"
+                                            >
+                                                <X className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Existing uploaded files (only for existing members) */}
+                            {!editingMember.isNew && memberDocuments.length > 0 && (
+                                <div className="space-y-2">
+                                    {memberDocuments.map(doc => (
+                                        <div key={doc.id} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg border border-gray-100 group hover:border-blue-200">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <File className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                                <a
+                                                    href={`${API_BASE}${doc.file_path}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-sm text-blue-600 hover:underline truncate"
+                                                    title={doc.file_name}
+                                                >
+                                                    {doc.file_name}
+                                                </a>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDeleteDocument(doc.id)}
+                                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                                title="ลบ"
+                                            >
+                                                <X className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {pendingFiles.length === 0 && memberDocuments.length === 0 && (
+                                <p className="text-xs text-gray-400 text-center py-3">ยังไม่มีเอกสาร</p>
+                            )}
+                        </>
                         <div className="flex justify-end gap-3 pt-4">
                             <button
                                 onClick={() => setIsModalOpen(false)}
@@ -357,8 +521,8 @@ const TeamMembersTab = () => {
                         ลบ
                     </button>
                 </div>
-            </Modal>
-        </div>
+            </Modal >
+        </div >
     );
 };
 

@@ -56,3 +56,20 @@ export const formatBudget = (budget) => {
     }
     return `฿${formatNumber(budget)}`;
 };
+
+/**
+ * Format date to readable Thai format with CE Year
+ * @param {string} dateString - Date string in ISO format
+ * @param {object} options - Intl.DateTimeFormat options
+ * @returns {string} Formatted date string
+ */
+export const formatDateCE = (dateString, options = {}) => {
+    if (!dateString) return '-';
+    const defaultOptions = {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        calendar: 'gregory'
+    };
+    return new Date(dateString).toLocaleDateString('th-TH', { ...defaultOptions, ...options });
+};

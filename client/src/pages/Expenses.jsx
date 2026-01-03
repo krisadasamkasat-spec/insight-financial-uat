@@ -1,10 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import PaymentCycleExpenseCard from '../components/finance/PaymentCycleExpenseCard';
 import Summary from '../components/finance/Summary';
 import ApproveConfirmModal from '../components/finance/ApproveConfirmModal';
+import RejectExpenseModal from '../components/modals/RejectExpenseModal';
+import ExpenseListContent from '../components/finance/ExpenseListContent';
 import { projectAPI } from '../services/api';
 import { formatNumber } from '../utils/formatters';
 import { useToast } from '../contexts/ToastContext';
+import { List, CheckCircle } from 'lucide-react';
 
 const MONTHS = [
     "January", "February", "March", "April", "May", "June",
@@ -13,13 +17,26 @@ const MONTHS = [
 
 const Expenses = () => {
     const toast = useToast();
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // Main view tab: 'list' | 'approval'
+    const activeView = searchParams.get('view') || 'list';
+    const setActiveView = (view) => setSearchParams({ view });
+
+    // Raw expenses from API (for List view)
+    const [rawExpenses, setRawExpenses] = useState([]);
     const [expenses, setExpenses] = useState([]);
-    const [incomes, setIncomes] = useState([]); // Add incomes state
+    const [incomes, setIncomes] = useState([]);
     const [projectMap, setProjectMap] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [selectedExpenses, setSelectedExpenses] = useState(new Set());
     const [expandedPaymentCycles, setExpandedPaymentCycles] = useState(new Set());
-    const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'paid'
+    const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'paid' | 'rejected'
+
+    // Rejection modal state
+    const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+    const [expenseToReject, setExpenseToReject] = useState(null);
+    const [isRejecting, setIsRejecting] = useState(false);
 
 
     // Fetch Balance Helper
@@ -66,31 +83,37 @@ const Expenses = () => {
 
                 // Map Expenses with enhanced data for new card layout
                 const mapped = expRes.data.map(e => {
-                    const baseAmt = parseFloat(e.base_amount) || 0;
-                    const whtRateVal = e.wht_rate !== null && e.wht_rate !== undefined ? parseFloat(e.wht_rate) : 3;
-                    const vatRateVal = e.vat_rate !== null && e.vat_rate !== undefined ? parseFloat(e.vat_rate) : 7;
+                    const priceAmt = parseFloat(e.price) || 0;
+                    const whtAmt = parseFloat(e.wht_amount) || 0;
+                    const vatAmt = parseFloat(e.vat_amount) || 0;
                     return {
                         id: e.id,
                         projectCode: e.project_code,
-                        expenseCode: e.expense_code,
+                        expenseCode: e.account_code,  // DB column is account_code
+                        account_title: e.account_title, // From JOIN with account_codes
                         expenseCategory: e.expense_category,
                         title: e.title || e.description,
                         description: e.description,
                         recipient: e.recipient,
                         status: e.status,
-                        paymentDate: e.payment_date,
+                        paymentDate: e.payment_date || e.due_date, // Try due_date if no payment_date
                         issueDate: e.issue_date,
                         netAmount: parseFloat(e.net_amount) || 0,
-                        priceAmount: baseAmt,
-                        vatRate: vatRateVal,
-                        whtRate: whtRateVal,
-                        whtAmount: baseAmt * (whtRateVal / 100),
-                        baseAmount: baseAmt,
+                        priceAmount: priceAmt,
+                        vatAmount: vatAmt,
+                        whtAmount: whtAmt,
                         attachments: e.attachments || [],
-                        createdAt: e.created_at
+                        createdAt: e.created_at,
+                        // New fields for card layout
+                        category_type: e.expense_type,
+                        expense_type: e.expense_type,
+                        contact: e.contact,
+                        bill_header: e.bill_header,
+                        payback_to: e.payback_to,
                     };
                 });
                 setExpenses(mapped);
+                setRawExpenses(expRes.data); // Store raw data for List view
 
                 // Map Incomes for Calendar
                 const mappedIncomes = incRes.data.map(i => ({
@@ -130,8 +153,10 @@ const Expenses = () => {
 
     // Format payment date to readable string
     const formatPaymentDate = (dateString) => {
-        if (!dateString) return "No Date";
+        if (!dateString || dateString === 'No Date') return "No Payment Cycle";
         const date = new Date(dateString);
+        if (isNaN(date.getTime())) return "Invalid Date";
+
         const day = date.getDate();
         const month = MONTHS[date.getMonth()];
         const year = date.getFullYear();
@@ -142,9 +167,12 @@ const Expenses = () => {
     const filteredExpenses = useMemo(() => {
         return expenses.filter(e => {
             const isPaid = e.status === 'จ่ายแล้ว' || e.status === 'Paid';
+            const isRejected = e.status === 'ไม่อนุมัติ' || e.status === 'Rejected';
+
             if (activeTab === 'paid') return isPaid;
-            // pending tab: anything NOT paid
-            return !isPaid;
+            if (activeTab === 'rejected') return isRejected;
+            // pending tab: anything NOT paid and NOT rejected
+            return !isPaid && !isRejected;
         });
     }, [expenses, activeTab]);
 
@@ -222,12 +250,13 @@ const Expenses = () => {
             // Refresh expenses
             const res = await projectAPI.getAllExpenses();
             const mapped = res.data.map(e => {
-                const baseAmt = parseFloat(e.base_amount) || 0;
-                const whtRate = parseFloat(e.wht_rate) || 3;
+                const priceAmt = parseFloat(e.price) || 0;
+                const whtAmt = parseFloat(e.wht_amount) || 0;
+                const vatAmt = parseFloat(e.vat_amount) || 0;
                 return {
                     id: e.id,
                     projectCode: e.project_code,
-                    expenseCode: e.expense_code,
+                    expenseCode: e.account_code,
                     expenseCategory: e.expense_category,
                     title: e.title || e.description,
                     description: e.description,
@@ -236,11 +265,9 @@ const Expenses = () => {
                     paymentDate: e.payment_date,
                     issueDate: e.issue_date,
                     netAmount: parseFloat(e.net_amount) || 0,
-                    priceAmount: baseAmt,
-                    vatRate: parseFloat(e.vat_rate) || 7,
-                    whtRate: whtRate,
-                    whtAmount: baseAmt * (whtRate / 100),
-                    baseAmount: baseAmt,
+                    priceAmount: priceAmt,
+                    vatAmount: vatAmt,
+                    whtAmount: whtAmt,
                     attachments: e.attachments || []
                 };
             });
@@ -319,10 +346,10 @@ const Expenses = () => {
                 recipient: e.recipient,
                 status: e.status,
                 paymentDate: e.payment_date,
-                netAmount: parseFloat(e.net_amount),
-                vatRate: parseFloat(e.vat_rate),
-                whtRate: parseFloat(e.wht_rate),
-                baseAmount: parseFloat(e.base_amount),
+                netAmount: parseFloat(e.net_amount) || 0,
+                vatAmount: parseFloat(e.vat_amount) || 0,
+                whtAmount: parseFloat(e.wht_amount) || 0,
+                priceAmount: parseFloat(e.price) || 0,
                 attachments: e.attachments || []
             }));
             setExpenses(mapped); // Quick refresh locally
@@ -336,6 +363,64 @@ const Expenses = () => {
         } catch (err) {
             console.error("Failed to approve", err);
             toast.error("ไม่สามารถอนุมัติรายการได้");
+        }
+    };
+
+    // Handle opening reject modal
+    const handleOpenRejectModal = (expense) => {
+        setExpenseToReject(expense);
+        setIsRejectModalOpen(true);
+    };
+
+    // Handle confirm rejection with reason
+    const handleConfirmReject = async (expenseId, reason) => {
+        setIsRejecting(true);
+        try {
+            await projectAPI.updateExpenseStatus(expenseId, {
+                status: 'ไม่อนุมัติ',
+                reject_reason: reason
+            });
+
+            // Refresh expenses
+            const res = await projectAPI.getAllExpenses();
+            const mapped = res.data.map(e => {
+                const priceAmt = parseFloat(e.price) || 0;
+                const whtAmt = parseFloat(e.wht_amount) || 0;
+                return {
+                    id: e.id,
+                    projectCode: e.project_code,
+                    expenseCode: e.account_code,
+                    account_title: e.account_title,
+                    title: e.title || e.description,
+                    description: e.description,
+                    recipient: e.recipient,
+                    status: e.status,
+                    paymentDate: e.payment_date || e.due_date,
+                    issueDate: e.issue_date,
+                    netAmount: parseFloat(e.net_amount) || 0,
+                    priceAmount: priceAmt,
+                    vatAmount: parseFloat(e.vat_amount) || 0,
+                    whtAmount: whtAmt,
+                    attachments: e.attachments || [],
+                    createdAt: e.created_at,
+                    category_type: e.expense_type,
+                    expense_type: e.expense_type,
+                    contact: e.contact,
+                    bill_header: e.bill_header,
+                    payback_to: e.payback_to,
+                    reject_reason: e.reject_reason
+                };
+            });
+            setExpenses(mapped);
+
+            setIsRejectModalOpen(false);
+            setExpenseToReject(null);
+            toast.success("ไม่อนุมัติรายการเรียบร้อยแล้ว");
+        } catch (err) {
+            console.error("Failed to reject", err);
+            toast.error("ไม่สามารถดำเนินการได้");
+        } finally {
+            setIsRejecting(false);
         }
     };
 
@@ -360,7 +445,7 @@ const Expenses = () => {
                         <div key={index} className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
                             {/* Payment Cycle Header */}
                             <div
-                                className="p-4 px-5 bg-gradient-to-r from-amber-50 to-yellow-50 border-b border-amber-200 flex justify-between items-center"
+                                className="p-4 px-5 bg-gray-50 border-b border-gray-200 flex justify-between items-center"
                             >
                                 <div className="flex items-center gap-3">
                                     <div className="flex items-center">
@@ -372,32 +457,32 @@ const Expenses = () => {
                                                     if (el) el.indeterminate = isSomeSelected;
                                                 }}
                                                 onChange={() => handleTogglePaymentCycle(allExpenses)}
-                                                className="w-4 h-4 cursor-pointer accent-amber-500"
+                                                className="w-4 h-4 cursor-pointer accent-blue-600"
                                             />
                                         )}
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-600">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500">
                                             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                                             <line x1="16" y1="2" x2="16" y2="6"></line>
                                             <line x1="8" y1="2" x2="8" y2="6"></line>
                                             <line x1="3" y1="10" x2="21" y2="10"></line>
                                         </svg>
-                                        <span className="text-sm font-bold text-amber-800">
+                                        <span className="text-sm font-bold text-gray-700">
                                             Cycle: {formatPaymentDate(paymentCycle.paymentDate)}
                                         </span>
                                     </div>
-                                    <span className="text-xs text-amber-600">
+                                    <span className="text-xs text-gray-500">
                                         ({allExpenses.length} รายการ)
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <div className="text-sm text-amber-700">
-                                        Total <span className="font-bold text-red-500 bg-white/70 px-2 py-1 rounded-md ml-1">฿{formatNumber(paymentCycle.total)}</span>
+                                    <div className="text-sm text-gray-600">
+                                        Total <span className="font-bold text-red-600 bg-white border border-gray-200 px-2 py-1 rounded-md ml-1">฿{formatNumber(paymentCycle.total)}</span>
                                     </div>
                                     <button
                                         onClick={() => handleToggleExpand(index)}
-                                        className="p-1.5 rounded-lg hover:bg-amber-200/50 text-amber-500 hover:text-amber-700 transition-colors"
+                                        className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors"
                                     >
                                         <svg
                                             width="20"
@@ -425,7 +510,8 @@ const Expenses = () => {
                                             isSelected={selectedExpenses.has(expense.id)}
                                             onToggle={() => handleToggleExpense(expense.id)}
                                             onPaymentCycleChange={handlePaymentCycleChange}
-                                            isSelectionEnabled={!isPaidTab}
+                                            onReject={!isPaidTab && activeTab !== 'rejected' ? handleOpenRejectModal : null}
+                                            isSelectionEnabled={!isPaidTab && activeTab !== 'rejected'}
                                         />
                                     ))}
                                 </div>
@@ -445,67 +531,130 @@ const Expenses = () => {
 
     return (
         <div className="p-8 max-w-[1400px] mx-auto">
+            {/* Page Header */}
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">อนุมัติรายการเบิกจ่าย</h1>
-                <p className="text-sm text-gray-500 mt-1">จากฐานข้อมูลจริง {filteredExpenses.length} รายการ</p>
+                <h1 className="text-2xl font-bold text-gray-900">ค่าใช้จ่าย</h1>
+                <p className="text-sm text-gray-500 mt-1">จัดการและอนุมัติรายการค่าใช้จ่ายทั้งหมด</p>
             </div>
 
-            {/* Tab Navigation */}
-            <div className="flex gap-2 mb-6 bg-gray-100/50 p-1 rounded-xl w-fit">
+            {/* Main View Tab Navigation */}
+            <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
                 <button
-                    onClick={() => setActiveTab('pending')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'pending'
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700'
+                    onClick={() => setActiveView('list')}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${activeView === 'list'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                         }`}
                 >
-                    รออนุมัติ ({expenses.filter(e => e.status !== 'จ่ายแล้ว' && e.status !== 'Paid').length})
+                    <List className="w-4 h-4" />
+                    รายการค่าใช้จ่าย
                 </button>
                 <button
-                    onClick={() => setActiveTab('paid')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'paid'
-                        ? 'bg-white text-emerald-700 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700'
+                    onClick={() => setActiveView('approval')}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${activeView === 'approval'
+                            ? 'bg-white text-emerald-600 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                         }`}
                 >
-                    อนุมัติแล้ว ({expenses.filter(e => e.status === 'จ่ายแล้ว' || e.status === 'Paid').length})
+                    <CheckCircle className="w-4 h-4" />
+                    อนุมัติเบิกจ่าย
                 </button>
             </div>
 
-            {activeTab === 'pending' ? (
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6 items-start">
-                    <div>
-                        {renderExpenses()}
-                    </div>
-
-                    {/* Summary Section */}
-                    <div className="lg:col-span-1 lg:sticky lg:top-8 h-fit space-y-6">
-                        <Summary
-                            totalSelectedAmount={totalSelectedAmount}
-                            selectedCount={selectedExpenses.size}
-                            onApprove={handleApprove}
-                            incomes={incomes} // Pass incomes
-                            accountBalance={accountBalance} // Pass balance
-                            isPaidTab={isPaidTab} // Pass tab state
-                        />
-                    </div>
-                </div>
+            {/* View Content */}
+            {activeView === 'list' ? (
+                <ExpenseListContent
+                    expenses={rawExpenses}
+                    onRefresh={async () => {
+                        const res = await projectAPI.getAllExpenses();
+                        const sorted = res.data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                        setRawExpenses(sorted);
+                    }}
+                    isLoading={isLoading}
+                />
             ) : (
-                <div className="w-full">
-                    {renderExpenses()}
-                </div>
+                /* Approval View */
+                <>
+
+                    {/* Tab Navigation */}
+                    <div className="flex gap-2 mb-6 bg-gray-100/50 p-1 rounded-xl w-fit">
+                        <button
+                            onClick={() => setActiveTab('pending')}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'pending'
+                                ? 'bg-white text-gray-900 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            รออนุมัติ ({expenses.filter(e => e.status !== 'จ่ายแล้ว' && e.status !== 'Paid' && e.status !== 'ไม่อนุมัติ' && e.status !== 'Rejected').length})
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('paid')}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'paid'
+                                ? 'bg-white text-emerald-700 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            อนุมัติแล้ว ({expenses.filter(e => e.status === 'จ่ายแล้ว' || e.status === 'Paid').length})
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('rejected')}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'rejected'
+                                ? 'bg-white text-red-600 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            ไม่อนุมัติ ({expenses.filter(e => e.status === 'ไม่อนุมัติ' || e.status === 'Rejected').length})
+                        </button>
+                    </div>
+
+                    {activeTab === 'pending' ? (
+                        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6 items-start">
+                            <div>
+                                {renderExpenses()}
+                            </div>
+
+                            {/* Summary Section */}
+                            <div className="lg:col-span-1 lg:sticky lg:top-8 h-fit space-y-6">
+                                <Summary
+                                    totalSelectedAmount={totalSelectedAmount}
+                                    selectedCount={selectedExpenses.size}
+                                    onApprove={handleApprove}
+                                    incomes={incomes} // Pass incomes
+                                    accountBalance={accountBalance} // Pass balance
+                                    isPaidTab={isPaidTab} // Pass tab state
+                                />
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="w-full">
+                            {renderExpenses()}
+                        </div>
+                    )}
+
+
+                    {/* Approve Confirmation Modal */}
+                    <ApproveConfirmModal
+                        isOpen={isApproveModalOpen}
+                        onClose={() => setIsApproveModalOpen(false)}
+                        onConfirm={handleConfirmApprove}
+                        expenses={selectedExpensesList}
+                        totalAmount={totalSelectedAmount}
+                        remainingBalance={remainingBalance}
+                    />
+
+                    {/* Reject Expense Modal */}
+                    <RejectExpenseModal
+                        isOpen={isRejectModalOpen}
+                        onClose={() => {
+                            setIsRejectModalOpen(false);
+                            setExpenseToReject(null);
+                        }}
+                        onConfirm={handleConfirmReject}
+                        expense={expenseToReject}
+                        isLoading={isRejecting}
+                    />
+                </>
             )}
-
-
-            {/* Approve Confirmation Modal */}
-            <ApproveConfirmModal
-                isOpen={isApproveModalOpen}
-                onClose={() => setIsApproveModalOpen(false)}
-                onConfirm={handleConfirmApprove}
-                expenses={selectedExpensesList}
-                totalAmount={totalSelectedAmount}
-                remainingBalance={remainingBalance}
-            />
         </div>
     );
 };

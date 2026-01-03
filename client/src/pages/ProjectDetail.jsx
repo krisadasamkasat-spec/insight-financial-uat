@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { Search, Plus, Pencil, Trash2 } from 'lucide-react';
 import { projectAPI } from '../services/api';
-import { formatNumber, formatDate } from '../utils/formatters';
+import { formatNumber, formatDate, formatDateCE } from '../utils/formatters';
 import AddIncomeModal from '../components/finance/AddIncomeModal';
 import AddExpenseModal from '../components/finance/AddExpenseModal';
 import EditIncomeModal from '../components/finance/EditIncomeModal';
@@ -39,7 +39,7 @@ const ProjectDetail = () => {
     const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
     const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, type: null, data: null });
     const [isEditIncomeModalOpen, setIsEditIncomeModalOpen] = useState(false);
     const [isEditExpenseModalOpen, setIsEditExpenseModalOpen] = useState(false);
     const [isTeamMemberModalOpen, setIsTeamMemberModalOpen] = useState(false);
@@ -111,24 +111,7 @@ const ProjectDetail = () => {
                 // The API returns snake_case for DB columns. 
                 // Let's create a quick mapper or adjust the UI to use snake_case.
                 // For safety/speed, I'll map to camelCase to match existing UI code.
-                const mappedExpenses = expensesRes.data.map(e => ({
-                    id: e.id,
-                    projectCode: e.project_code,
-                    expenseCode: e.expense_code,
-                    expenseCategory: e.expense_category || e.expense_code, // from join
-                    title: e.title || e.description, // some fields might be mixed
-                    description: e.description,
-                    recipient: e.recipient,
-                    status: e.status,
-                    issueDate: e.issue_date,
-                    paymentDate: e.payment_date,
-                    netAmount: parseFloat(e.net_amount),
-                    vatRate: parseFloat(e.vat_rate),
-                    whtRate: parseFloat(e.wht_rate),
-                    baseAmount: parseFloat(e.base_amount),
-                    attachments: e.attachments || []
-                }));
-                setProjectExpenses(mappedExpenses);
+                setProjectExpenses(expensesRes.data);
 
                 const mappedIncomes = incomesRes.data.map(i => ({
                     id: i.id,
@@ -158,7 +141,7 @@ const ProjectDetail = () => {
         }
     }, [projectCode, refreshKey]);
 
-    const totalExpenseAmount = React.useMemo(() => projectExpenses.reduce((sum, e) => sum + (e.netAmount || 0), 0), [projectExpenses]);
+    const totalExpenseAmount = React.useMemo(() => projectExpenses.reduce((sum, e) => sum + (parseFloat(e.net_amount) || 0), 0), [projectExpenses]);
     const totalIncomeAmount = React.useMemo(() => projectIncomes.reduce((sum, i) => sum + (i.amount || 0), 0), [projectIncomes]);
 
     const projectTeam = project ? project.teamMembers : [];
@@ -185,9 +168,11 @@ const ProjectDetail = () => {
     const filteredExpenses = React.useMemo(() => {
         return projectExpenses.filter(expense => {
             const matchesSearch = expenseSearch === '' ||
-                (expense.title || '').toLowerCase().includes(expenseSearch.toLowerCase()) ||
-                (expense.recipient || '').toLowerCase().includes(expenseSearch.toLowerCase());
-            const matchesStatus = expenseStatusFilter === 'all' || expense.status === expenseStatusFilter;
+                (expense.account_title || '').toLowerCase().includes(expenseSearch.toLowerCase()) ||
+                (expense.description || '').toLowerCase().includes(expenseSearch.toLowerCase()) ||
+                (expense.contact || '').toLowerCase().includes(expenseSearch.toLowerCase()) ||
+                (expense.account_code || '').toLowerCase().includes(expenseSearch.toLowerCase());
+            const matchesStatus = expenseStatusFilter === 'all' || expense.internal_status === expenseStatusFilter;
             return matchesSearch && matchesStatus;
         });
     }, [projectExpenses, expenseSearch, expenseStatusFilter]);
@@ -227,23 +212,35 @@ const ProjectDetail = () => {
         }
     };
 
-    const handleAddExpense = async (newExpense) => {
+    const handleAddExpense = async (newExpense, attachments = []) => {
         try {
-            await projectAPI.createExpense({
-                project_code: projectCode,
-                expense_code: newExpense.expenseCode,
-                description: newExpense.description,
-                title: newExpense.title,
-                status: newExpense.status, // e.g. 'วางบิล'
-                recipient: newExpense.recipient,
-                issue_date: newExpense.issueDate,
-                payment_date: newExpense.paymentDate,
-                base_amount: newExpense.taxBase,
-                vat_rate: newExpense.vat,
-                wht_rate: newExpense.whtRate,
-                net_amount: newExpense.netAmount,
+            const res = await projectAPI.createExpense({
+                ...newExpense,
                 created_by: 1
             });
+
+            console.log('✅ Expense Created:', res);
+            const expenseId = res.data?.id;
+
+            if (!expenseId) {
+                console.error('❌ Error: Expense ID missing in response', res.data);
+                toast.error('Internal Error: Could not upload attachments (Missing ID)');
+            } else {
+                // Handle Attachments
+                console.log('📦 handleAddExpense Attachments:', attachments);
+                if (attachments && attachments.length > 0) {
+                    const uploadPromises = attachments.map((file, i) => {
+                        if (!file) console.error(`❌ Attachment [${i}] is null/undefined!`);
+                        console.log(`📄 Processing Attachment [${i}]:`, file);
+                        const formData = new FormData();
+                        formData.append('files', file);
+                        return projectAPI.uploadExpenseAttachment(expenseId, formData);
+                    });
+
+                    await Promise.all(uploadPromises);
+                }
+            }
+
             setRefreshKey(p => p + 1);
             toast.success('เพิ่มรายจ่ายสำเร็จ');
         } catch (err) {
@@ -272,31 +269,30 @@ const ProjectDetail = () => {
             toast.error('Failed to update income');
         }
     };
-    const handleDeleteIncome = async (id) => {
+    const executeDeleteIncome = async (id) => {
         try {
             await projectAPI.deleteIncome(id);
             setRefreshKey(p => p + 1);
             toast.success('ลบรายรับสำเร็จ');
+            setDeleteModal({ isOpen: false, type: null, data: null });
         } catch (err) {
             toast.error('Failed to delete income');
         }
     };
+
+    const requestDeleteIncome = (income) => {
+        setDeleteModal({
+            isOpen: true,
+            type: 'income',
+            data: income
+        });
+    };
+
+    const handleDeleteIncomeLegacy = (id) => executeDeleteIncome(id);
     const handleUpdateExpense = async (updated) => {
         if (!selectedExpense) return;
         try {
-            await projectAPI.updateExpense(selectedExpense.id, {
-                expense_code: updated.expenseCode,
-                description: updated.description,
-                title: updated.title,
-                status: updated.status,
-                recipient: updated.recipient,
-                issue_date: updated.issueDate,
-                payment_date: updated.paymentDate,
-                base_amount: updated.priceAmount || updated.taxBase,  // Modal sends priceAmount and taxBase
-                vat_rate: updated.vat,  // Modal sends "vat" (7 or 0)
-                wht_rate: updated.whtRate,
-                net_amount: updated.netAmount
-            });
+            await projectAPI.updateExpense(selectedExpense.id, updated);
             setRefreshKey(p => p + 1);
             setIsEditExpenseModalOpen(false);
             setSelectedExpense(null);
@@ -306,16 +302,29 @@ const ProjectDetail = () => {
             toast.error('Failed to update expense');
         }
     };
-    const handleDeleteExpense = async (id) => {
+    const executeDeleteExpense = async (id) => {
         try {
             await projectAPI.deleteExpense(id);
             setRefreshKey(p => p + 1);
             toast.success('ลบรายจ่ายสำเร็จ');
-        } catch (error) { // eslint-disable-line no-unused-vars
-            console.error(error); // wait, previously it was err, console not logged?
+            setDeleteModal({ isOpen: false, type: null, data: null });
+        } catch (error) {
+            console.error(error);
             toast.error('Failed to delete expense');
         }
     };
+
+    const requestDeleteExpense = (expense) => {
+        setDeleteModal({
+            isOpen: true,
+            type: 'expense',
+            data: expense
+        });
+    };
+
+    // Forward compatibility for EditModal which expects direct delete
+    // But ideally EditModal has its own confirmation too.
+    const handleDeleteExpenseLegacy = (id) => executeDeleteExpense(id);
 
     // [MODIFIED] Intercept Status Change for Income
     const handleUpdateIncomeStatus = async (incomeId, newStatus) => {
@@ -343,10 +352,10 @@ const ProjectDetail = () => {
         setPendingStatusChange({
             type: 'expense',
             id: expenseId,
-            oldStatus: expense.status,
+            oldStatus: expense.internal_status,
             newStatus: newStatus,
-            amount: expense.netAmount,
-            itemTitle: expense.title
+            amount: expense.net_amount,
+            itemTitle: expense.account_title || expense.description
         });
     };
 
@@ -367,7 +376,7 @@ const ProjectDetail = () => {
                 });
             } else if (pendingStatusChange.type === 'expense') {
                 await projectAPI.updateExpenseStatus(pendingStatusChange.id, {
-                    status: pendingStatusChange.newStatus
+                    internal_status: pendingStatusChange.newStatus
                 });
             }
 
@@ -474,9 +483,13 @@ const ProjectDetail = () => {
         { value: 'Received', label: 'ได้รับแล้ว', color: 'emerald' }
     ];
     const expenseStatusOptions = [
-        { value: 'สำรองจ่าย', label: 'สำรองจ่าย', color: 'blue' },
-        { value: 'วางบิล', label: 'วางบิล', color: 'green' },
-        { value: 'จ่ายแล้ว', label: 'จ่ายแล้ว', color: 'emerald' }
+        { value: 'ส่งเบิกแล้ว รอเอกสารตัวจริง', label: 'รอเอกสาร', color: 'yellow' },
+        { value: 'บัญชีตรวจ และ ได้รับเอกสารตัวจริง', label: 'บัญชีตรวจ', color: 'blue' },
+        { value: 'VP อนุมัติแล้ว ส่งเบิกได้', label: 'VP อนุมัติ', color: 'purple' },
+        { value: 'ส่งเข้า PEAK', label: 'ส่ง PEAK', color: 'indigo' },
+        { value: 'โอนแล้ว รอส่งหลักฐาน', label: 'รอหลักฐาน', color: 'cyan' },
+        { value: 'ส่งหลักฐานแล้ว เอกสารครบ', label: 'เสร็จสิ้น', color: 'emerald' },
+        { value: 'reject ยกเลิก / รอแก้ไข', label: 'ยกเลิก', color: 'red' }
     ];
 
 
@@ -755,8 +768,8 @@ const ProjectDetail = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {filteredIncomes.map(income => (
-                                <tr key={income.id} className="hover:bg-gray-50 transition-colors">
+                            {filteredIncomes.map((income, idx) => (
+                                <tr key={income.id || idx} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-4 py-3"><div className="text-sm text-gray-900">{income.description || 'รายรับจากโปรเจค'}</div></td>
                                     <td className="px-4 py-3 text-sm text-gray-500">{formatDate(income.date)}</td>
                                     <td className="px-4 py-3"><StatusBadge status={income.status} options={incomeStatusOptions} onChange={(s) => handleUpdateIncomeStatus(income.id, s)} /></td>
@@ -767,6 +780,9 @@ const ProjectDetail = () => {
                                     <td className="px-4 py-3 text-center">
                                         <button onClick={() => handleEditIncome(income)} className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors">
                                             <Pencil className="w-4 h-4" />
+                                        </button>
+                                        <button onClick={() => requestDeleteIncome(income)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors ml-1">
+                                            <Trash2 className="w-4 h-4" />
                                         </button>
                                     </td>
                                 </tr>
@@ -804,53 +820,100 @@ const ProjectDetail = () => {
                     <MinimalDropdown
                         label="สถานะ"
                         value={expenseStatusFilter}
-                        options={['สำรองจ่าย', 'วางบิล', 'จ่ายแล้ว']}
+                        options={['ส่งเบิกแล้ว รอเอกสารตัวจริง', 'บัญชีตรวจ และ ได้รับเอกสารตัวจริง', 'VP อนุมัติแล้ว ส่งเบิกได้', 'ส่งเข้า PEAK', 'โอนแล้ว รอส่งหลักฐาน', 'ส่งหลักฐานแล้ว เอกสารครบ', 'reject ยกเลิก / รอแก้ไข']}
                         onChange={(v) => setExpenseStatusFilter(v === 'all' ? 'all' : v)}
                         allLabel="ทั้งหมด"
                     />
                     <span className="text-sm text-gray-500">{filteredExpenses.length} / {projectExpenses.length} รายการ</span>
                 </div>
-                <button onClick={() => setIsExpenseModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors">
+                <button onClick={() => setIsExpenseModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-medium rounded-lg transition-colors shadow-sm">
                     <Plus className="w-4 h-4" /> เพิ่มรายจ่าย
                 </button>
             </div>
             {filteredExpenses.length > 0 ? (
-                <div className="bg-white rounded-xl border border-gray-200">
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
                     <table className="w-full">
-                        <thead className="bg-gray-50 border-b border-gray-200">
+                        <thead className="bg-gray-50/80 border-b border-gray-200">
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">รหัส</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">รายละเอียด</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">ผู้รับเงิน</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">สถานะ</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">วันที่จ่าย</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">เอกสาร</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">จำนวนเงิน</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">จัดการ</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">รหัส</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">ประเภท</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">รายละเอียด</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">ผู้รับเงิน</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">กำหนดจ่าย</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">จำนวนเงิน</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">ไฟล์แนบ</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">สถานะ</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">จัดการ</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {filteredExpenses.map(expense => (
-                                <tr key={expense.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-4 py-3"><span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-mono rounded">{expense.expenseCode}</span></td>
-                                    <td className="px-4 py-3"><div className="text-sm text-gray-900">{expense.title}</div></td>
-                                    <td className="px-4 py-3 text-sm text-gray-600">{expense.recipient}</td>
-                                    <td className="px-4 py-3"><StatusBadge status={expense.status} options={expenseStatusOptions} onChange={(s) => handleUpdateExpenseStatus(expense.id, s)} /></td>
-                                    <td className="px-4 py-3 text-sm text-gray-500">{formatDate(expense.paymentDate)}</td>
+                        <tbody className="divide-y divide-gray-50">
+                            {filteredExpenses.map((expense, idx) => (
+                                <tr key={expense.id || idx} className={`hover:bg-blue-50/30 transition-colors ${idx % 2 === 1 ? 'bg-gray-50/30' : ''}`}>
+                                    <td className="px-4 py-3">
+                                        <span className="text-sm font-medium text-blue-600">{expense.account_code || expense.id}</span>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${expense.expense_type === 'เบิกที่สำรองจ่าย' ? 'bg-orange-50 text-orange-600 border border-orange-200' : 'bg-blue-50 text-blue-600 border border-blue-200'}`}>
+                                            {expense.expense_type || 'วางบิล'}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <div className="font-medium text-sm text-gray-900">{expense.account_title || '-'}</div>
+                                        <div className="text-xs text-gray-500">{expense.description || '-'}</div>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        {/* Logic: PaybackTo is primary (who gets money). Contact is secondary (shop/person dealing with). */}
+                                        {expense.payback_to ? (
+                                            <div>
+                                                <div className="text-sm text-gray-900 font-medium">{expense.payback_to}</div>
+                                                {expense.contact && expense.contact !== expense.payback_to && (
+                                                    <div className="text-xs text-gray-500">({expense.contact})</div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                <div className="text-sm text-gray-700">{expense.contact || '-'}</div>
+                                                {expense.bill_header && expense.bill_header !== expense.contact && (
+                                                    <div className="text-xs text-gray-400">{expense.bill_header}</div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-500">{formatDateCE(expense.due_date)}</td>
+                                    <td className="px-4 py-3 text-right">
+                                        <span className="text-sm font-semibold text-blue-700">฿{formatNumber(expense.net_amount)}</span>
+                                    </td>
                                     <td className="px-4 py-3 text-center">
                                         <AttachmentPreview attachments={expense.attachments || []} onOpenModal={() => handleViewAttachments(expense.attachments)} size="sm" />
                                     </td>
-                                    <td className="px-4 py-3 text-right"><span className="text-sm font-semibold text-gray-900">฿{formatNumber(expense.netAmount)}</span></td>
-                                    <td className="px-4 py-3 text-center">
-                                        <button onClick={() => handleEditExpense(expense)} className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors">
-                                            <Pencil className="w-4 h-4" />
-                                        </button>
+                                    <td className="px-4 py-3">
+                                        <StatusBadge
+                                            status={expense.internal_status}
+                                            options={expenseStatusOptions}
+                                            onChange={(s) => handleUpdateExpenseStatus(expense.id, s)}
+                                        />
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center justify-center gap-1">
+                                            <button onClick={() => handleEditExpense(expense)} className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors">
+                                                <Pencil className="w-4 h-4" />
+                                            </button>
+                                            <button onClick={() => requestDeleteExpense(expense)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
-                        <tfoot className="bg-gray-50 border-t border-gray-200">
-                            <tr><td colSpan="6" className="px-4 py-3 text-right text-sm font-semibold text-gray-600">รวมทั้งสิ้น</td><td className="px-4 py-3 text-right"><span className="text-base font-bold text-red-500">฿{formatNumber(totalExpenseAmount)}</span></td><td></td></tr>
+                        <tfoot className="bg-gray-50/80 border-t border-gray-200">
+                            <tr>
+                                <td colSpan="7" className="px-4 py-3 text-right text-sm font-medium text-gray-600">รวมทั้งสิ้น</td>
+                                <td className="px-4 py-3 text-right">
+                                    <span className="text-base font-bold text-orange-600">฿{formatNumber(totalExpenseAmount)}</span>
+                                </td>
+                                <td></td>
+                            </tr>
                         </tfoot>
                     </table>
                 </div>
@@ -898,8 +961,8 @@ const ProjectDetail = () => {
                 <div className="relative">
                     <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-gray-200"></div>
                     <div className="space-y-4">
-                        {activities.map(a => (
-                            <div key={a.id} className="relative flex gap-4 pl-12">
+                        {activities.map((a, idx) => (
+                            <div key={a.id || idx} className="relative flex gap-4 pl-12">
                                 <div className="absolute left-3 w-5 h-5 bg-white rounded-full border-2 border-blue-400 flex items-center justify-center text-xs">{a.icon}</div>
                                 <div className="flex-1 bg-white rounded-lg border border-gray-200 p-4">
                                     <div className="flex justify-between items-start mb-1">
@@ -961,7 +1024,7 @@ const ProjectDetail = () => {
                                     <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2" onClick={() => { setIsActionsMenuOpen(false); setIsEditModalOpen(true); }}>
                                         <Pencil className="w-4 h-4" /> แก้ไข
                                     </button>
-                                    <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2" onClick={() => { setIsActionsMenuOpen(false); setIsDeleteModalOpen(true); }}>
+                                    <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2" onClick={() => { setIsActionsMenuOpen(false); setDeleteModal({ isOpen: true, type: 'project', data: project }); }}>
                                         <Trash2 className="w-4 h-4" /> ลบ
                                     </button>
                                 </div>
@@ -982,11 +1045,23 @@ const ProjectDetail = () => {
 
             <AddIncomeModal isOpen={isIncomeModalOpen} onClose={() => setIsIncomeModalOpen(false)} onSubmit={handleAddIncome} projectCode={projectCode} />
             <AddExpenseModal isOpen={isExpenseModalOpen} onClose={() => setIsExpenseModalOpen(false)} onSubmit={handleAddExpense} projectCode={projectCode} />
-            <EditIncomeModal isOpen={isEditIncomeModalOpen} onClose={() => setIsEditIncomeModalOpen(false)} onSubmit={handleUpdateIncome} onDelete={handleDeleteIncome} income={selectedIncome} />
-            <EditExpenseModal isOpen={isEditExpenseModalOpen} onClose={() => setIsEditExpenseModalOpen(false)} onSubmit={handleUpdateExpense} onDelete={handleDeleteExpense} expense={selectedExpense} />
+            <EditIncomeModal isOpen={isEditIncomeModalOpen} onClose={() => setIsEditIncomeModalOpen(false)} onSubmit={handleUpdateIncome} onDelete={handleDeleteIncomeLegacy} income={selectedIncome} />
+            <EditExpenseModal isOpen={isEditExpenseModalOpen} onClose={() => setIsEditExpenseModalOpen(false)} onSubmit={handleUpdateExpense} onDelete={handleDeleteExpenseLegacy} expense={selectedExpense} />
             <ProjectModal mode="edit" isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} onSubmit={handleEditProject} project={project} />
             <EditTeamMemberModal isOpen={isEditTeamModalOpen} onClose={() => setIsEditTeamModalOpen(false)} onSubmit={handleUpdateTeamMember} assignment={selectedTeamMember} />
-            <ConfirmDeleteModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onConfirm={handleDeleteProject} title="ยืนยันการลบโปรเจค" itemName={project.projectName} itemCode={project.projectCode} warningMessage="ข้อมูลรายรับและรายจ่ายทั้งหมดจะถูกลบ" />
+            <ConfirmDeleteModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+                onConfirm={() => {
+                    if (deleteModal.type === 'project') handleDeleteProject();
+                    else if (deleteModal.type === 'expense') executeDeleteExpense(deleteModal.data.id);
+                    else if (deleteModal.type === 'income') executeDeleteIncome(deleteModal.data.id);
+                }}
+                title={deleteModal.type === 'project' ? "ยืนยันการลบโปรเจค" : deleteModal.type === 'income' ? "ยืนยันการลบรายรับ" : "ยืนยันการลบรายจ่าย"}
+                itemName={deleteModal.data?.projectName || deleteModal.data?.bill_header || deleteModal.data?.description}
+                itemCode={deleteModal.data?.projectCode || deleteModal.data?.account_code || (deleteModal.type === 'income' ? 'INC-' + deleteModal.data?.id : '')}
+                warningMessage={deleteModal.type === 'project' ? "ข้อมูลรายรับและรายจ่ายทั้งหมดจะถูกลบ" : "การดำเนินการนี้ไม่สามารถย้อนกลับได้"}
+            />
             <AddTeamMemberModal isOpen={isTeamMemberModalOpen} onClose={() => setIsTeamMemberModalOpen(false)} onSubmit={handleAddTeamMember} projectCode={projectCode} existingMemberIds={projectTeam.map(t => t.memberId)} />
             <ViewAttachmentsModal isOpen={isAttachmentsModalOpen} onClose={() => setIsAttachmentsModalOpen(false)} attachments={selectedAttachments} />
             <StatusChangeConfirmModal

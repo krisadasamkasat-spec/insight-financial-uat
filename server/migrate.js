@@ -37,10 +37,6 @@ async function runMigration() {
 
             // Add missing columns to expenses table if they don't exist
             const alterExpenseQueries = [
-                `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS title VARCHAR(255)`,
-                `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS recipient VARCHAR(255)`,
-                `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS base_amount NUMERIC(15, 2)`,
-                `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS vat_rate NUMERIC(5, 2) DEFAULT 7.00`,
                 `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id)`,
                 `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS approved_by INTEGER REFERENCES users(id)`,
                 `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP`,

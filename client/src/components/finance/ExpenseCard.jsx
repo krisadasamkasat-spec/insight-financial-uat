@@ -32,7 +32,12 @@ const ExpenseCard = ({ data, project, isSelected, onToggle, onPaymentCycleChange
         netAmount,
         priceAmount,
         vat,
-        wht
+        wht,
+        // New fields
+        category_type,
+        peak_status,
+        vendor_name,
+        payback_name
     } = data;
 
     // Derived values
@@ -72,7 +77,6 @@ const ExpenseCard = ({ data, project, isSelected, onToggle, onPaymentCycleChange
     };
 
     const handleOpenPaymentModal = () => {
-        // setShowMenu(false); // Removed
         setShowPaymentModal(true);
         setSelectedDate(null);
     };
@@ -98,7 +102,7 @@ const ExpenseCard = ({ data, project, isSelected, onToggle, onPaymentCycleChange
                         />
                     </div>
                     <div className="flex flex-col gap-2">
-                        {/* Project Code & Title */}
+                        {/* Project Code & Title & Type */}
                         <div className="flex items-center gap-2 text-sm">
                             <button
                                 onClick={() => setShowProjectDetails(true)}
@@ -107,18 +111,32 @@ const ExpenseCard = ({ data, project, isSelected, onToggle, onPaymentCycleChange
                                 {projectCode}
                             </button>
                             <span className="text-gray-300">|</span>
-                            <span className="text-gray-700">{expenseCode} {projectType} {title}</span>
+                            <span className="font-medium text-gray-900">{expenseCode}</span>
+                            {category_type && (
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${category_type === 'วางบิล' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>
+                                    {category_type}
+                                </span>
+                            )}
+                            <span className="text-gray-500 truncate max-w-[200px]">{title}</span>
                         </div>
 
                         {/* Description */}
-                        <div className="text-gray-400 text-xs">{description}</div>
+                        <div className="text-gray-400 text-xs truncate max-w-md">{description}</div>
 
-                        {/* Tags Row */}
+                        {/* Status Row */}
                         <div className="flex items-center gap-2 mt-1">
                             <span className={`px-2.5 py-0.5 rounded text-xs font-medium ${statusColors.bg} ${statusColors.text}`}>
                                 {status}
                             </span>
-                            <div className="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+
+                            {peak_status && (
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1 ${peak_status === 'Error' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'}`}>
+                                    <div className={`w-1.5 h-1.5 rounded-full ${peak_status === 'Error' ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                                    {peak_status}
+                                </span>
+                            )}
+
+                            <div className="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded ml-2">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
                                     <line x1="12" y1="2" x2="12" y2="22"></line>
@@ -127,13 +145,37 @@ const ExpenseCard = ({ data, project, isSelected, onToggle, onPaymentCycleChange
                             </div>
                         </div>
 
-                        {/* Recipient */}
-                        <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                <circle cx="12" cy="7" r="4"></circle>
-                            </svg>
-                            {recipient}
+                        {/* Recipient / Names Context */}
+                        <div className="flex flex-col gap-1 mt-1">
+                            {/* Primary Payee */}
+                            <div className="flex items-center gap-2 text-xs text-gray-600">
+                                {category_type === 'เบิกที่สำรองจ่าย' ? (
+                                    <>
+                                        <span className="font-semibold text-gray-500 w-20">Payback To:</span>
+                                        <span className="font-medium text-gray-800">{payback_name || '-'}</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="font-semibold text-gray-500 w-20">Bill Name:</span>
+                                        <span className="font-medium text-gray-800">{recipient || '-'}</span>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Secondary Info */}
+                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                                {category_type === 'เบิกที่สำรองจ่าย' ? (
+                                    <>
+                                        <span className="w-20">Store/Bill:</span>
+                                        <span>{recipient || '-'}</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="w-20">Contact:</span>
+                                        <span>{vendor_name || '-'}</span>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

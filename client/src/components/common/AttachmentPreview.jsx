@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { FileText, Paperclip, Image, File } from 'lucide-react';
+import { API_BASE } from '../../services/api';
 
 /**
  * AttachmentPreview Component
@@ -8,7 +9,7 @@ import { FileText, Paperclip, Image, File } from 'lucide-react';
  * Hover: Dropdown showing file list (uses Portal to escape overflow-hidden)
  * Click: Opens modal via onOpenModal callback
  */
-const DropdownPortal = ({ showDropdown, dropdownPosition, handleDropdownMouseEnter, handleDropdownMouseLeave, hasAttachments, attachments, maxPreview, getFileIcon, getFileName }) => {
+const DropdownPortal = ({ showDropdown, dropdownPosition, handleDropdownMouseEnter, handleDropdownMouseLeave, hasAttachments, attachments, maxPreview, getFileIcon, getFileName, imgError, onImgError }) => {
     if (!showDropdown) return null;
 
     return createPortal(
@@ -49,8 +50,17 @@ const DropdownPortal = ({ showDropdown, dropdownPosition, handleDropdownMouseEnt
                                     key={idx}
                                     className="flex items-center gap-2 px-2 py-1.5 rounded bg-gray-700/50 hover:bg-gray-700 transition-colors"
                                 >
-                                    {getFileIcon(file)}
-                                    <span className="text-xs text-gray-200 truncate flex-1">
+                                    {['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(getFileName(file)?.split('.').pop()?.toLowerCase()) && file.file_path && !imgError[idx] ? (
+                                        <img
+                                            src={`${API_BASE}/${file.file_path.replace(/^\//, '')}`}
+                                            alt={getFileName(file)}
+                                            className="w-5 h-5 object-cover rounded border border-gray-600"
+                                            onError={() => onImgError(idx)}
+                                        />
+                                    ) : (
+                                        getFileIcon(file)
+                                    )}
+                                    <span className="text-xs text-gray-200 truncate flex-1 block max-w-[180px]">
                                         {getFileName(file)}
                                     </span>
                                 </div>
@@ -96,6 +106,13 @@ const AttachmentPreview = ({
     const buttonRef = useRef(null);
 
     const hasAttachments = attachments.length > 0;
+    const [imgError, setImgError] = useState({});
+
+    useEffect(() => {
+        if (!showDropdown) {
+            setImgError({});
+        }
+    }, [showDropdown]);
 
     // Calculate dropdown position based on button position
     const updateDropdownPosition = () => {
@@ -163,7 +180,7 @@ const AttachmentPreview = ({
 
     // Get file icon based on type
     const getFileIcon = (file) => {
-        const name = typeof file === 'string' ? file : file.name || '';
+        const name = typeof file === 'string' ? file : file.name || file.file_name || '';
         const ext = name.split('.').pop()?.toLowerCase() || '';
 
         if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
@@ -183,7 +200,7 @@ const AttachmentPreview = ({
 
     // Get file name
     const getFileName = (file) => {
-        return typeof file === 'string' ? file : file.name || 'Unknown file';
+        return typeof file === 'string' ? file : file.name || file.file_name || 'Unknown file';
     };
 
     const handleClick = (e) => {
@@ -231,6 +248,8 @@ const AttachmentPreview = ({
                 maxPreview={maxPreview}
                 getFileIcon={getFileIcon}
                 getFileName={getFileName}
+                imgError={imgError}
+                onImgError={(idx) => setImgError(prev => ({ ...prev, [idx]: true }))}
             />
         </>
     );

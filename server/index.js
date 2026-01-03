@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const runMigration = require('./migrate');
@@ -24,6 +25,9 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Routes
 app.use('/api/products', require('./routes/products'));
 app.use('/api/members', require('./routes/members'));
@@ -34,6 +38,7 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/accounts', require('./routes/accounts'));
 app.use('/api/common', require('./routes/common'));
+app.use('/api/uploads', require('./routes/uploads'));
 
 // Health check endpoint
 app.get('/', (req, res) => {

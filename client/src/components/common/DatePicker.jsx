@@ -1,18 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Calendar } from 'lucide-react';
 import CalendarHub from '../finance/CalendarHub';
 
 /**
- * Date Picker component using CalendarHub
- * @param {Object} props
- * @param {string} props.label - Optional label text
- * @param {string} props.value - Current date value (YYYY-MM-DD format)
- * @param {Function} props.onChange - Callback with date string (YYYY-MM-DD)
- * @param {boolean} props.hasError - Show error state
- * @param {boolean} props.disablePast - Disable past dates (default: true)
- * @param {string} props.minDate - Minimum selectable date (YYYY-MM-DD format, optional)
- * @param {string} props.colorTheme - CalendarHub color theme
- * @param {boolean} props.dropUp - Show calendar above input (default: true)
+ * Date Picker component using CalendarHub with Portal for overflow safety
  */
 const DatePicker = ({
     label,
@@ -21,22 +13,12 @@ const DatePicker = ({
     hasError = false,
     disablePast = true,
     minDate = null,
-    colorTheme = 'blue',
-    dropUp = true
+    colorTheme = 'blue'
 }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const pickerRef = useRef(null);
-
-    // Close picker when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (pickerRef.current && !pickerRef.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
+    const buttonRef = useRef(null);
+    const calendarRef = useRef(null);
 
     // Format date for display
     const formatDisplayDate = (dateStr) => {
@@ -49,11 +31,62 @@ const DatePicker = ({
         });
     };
 
-    // Convert string to Date object
-    const selectedDate = value ? new Date(value) : null;
-    const minDateObj = minDate ? new Date(minDate) : null;
+    // Calculate position
+    const updatePosition = () => {
+        if (buttonRef.current && isOpen) {
+            const rect = buttonRef.current.getBoundingClientRect();
+            // Check potential overflow at bottom
+            const viewportHeight = window.innerHeight;
+            const spaceBelow = viewportHeight - rect.bottom;
+            const spaceAbove = rect.top;
+            const calendarHeight = 350; // Approx height
 
-    // Handle date selection
+            let top = rect.bottom + window.scrollY + 4;
+            // If not enough space below and more space above, flip up
+            if (spaceBelow < calendarHeight && spaceAbove > calendarHeight) {
+                top = rect.top + window.scrollY - calendarHeight - 4;
+            }
+
+            setPosition({
+                top: top,
+                left: rect.left + window.scrollX,
+                width: rect.width
+            });
+        }
+    };
+
+    useLayoutEffect(() => {
+        if (isOpen) {
+            updatePosition();
+            window.addEventListener('scroll', updatePosition, true);
+            window.addEventListener('resize', updatePosition);
+        }
+        return () => {
+            window.removeEventListener('scroll', updatePosition, true);
+            window.removeEventListener('resize', updatePosition);
+        };
+    }, [isOpen]);
+
+    // Close picker when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            // Check if click is inside button
+            if (buttonRef.current && buttonRef.current.contains(event.target)) {
+                return;
+            }
+            // Check if click is inside calendar (portal)
+            if (calendarRef.current && calendarRef.current.contains(event.target)) {
+                return;
+            }
+            setIsOpen(false);
+        };
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen]);
+
     const handleDateSelect = (date) => {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -62,8 +95,11 @@ const DatePicker = ({
         setIsOpen(false);
     };
 
+    const selectedDate = value ? new Date(value) : null;
+    const minDateObj = minDate ? new Date(minDate) : null;
+
     return (
-        <div className="w-full" ref={pickerRef}>
+        <div className="w-full">
             {label && (
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                     {label}
@@ -71,6 +107,7 @@ const DatePicker = ({
             )}
             <div className="relative">
                 <button
+                    ref={buttonRef}
                     type="button"
                     onClick={() => setIsOpen(!isOpen)}
                     className={`w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-lg border transition-all text-left ${hasError
@@ -86,9 +123,18 @@ const DatePicker = ({
                     <Calendar className="w-4 h-4 text-gray-400" />
                 </button>
 
-                {isOpen && (
-                    <div className={`absolute left-0 bg-white rounded-xl shadow-lg border border-gray-200 p-3 z-50 min-w-[280px] ${dropUp ? 'bottom-full mb-1' : 'top-full mt-1'
-                        }`}>
+                {isOpen && createPortal(
+                    <div
+                        ref={calendarRef}
+                        style={{
+                            position: 'absolute',
+                            top: position.top,
+                            left: position.left,
+                            // minWidth: position.width, // Optional: match button width
+                            zIndex: 9999
+                        }}
+                        className="bg-white rounded-xl shadow-xl border border-gray-200 p-3 min-w-[280px]"
+                    >
                         <CalendarHub
                             selectedDate={selectedDate}
                             onDateSelect={handleDateSelect}
@@ -99,7 +145,8 @@ const DatePicker = ({
                             initialMonth={selectedDate || minDateObj}
                             showTodayIndicator={true}
                         />
-                    </div>
+                    </div>,
+                    document.body
                 )}
             </div>
         </div>

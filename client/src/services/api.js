@@ -1,7 +1,9 @@
 import axios from 'axios';
 
-// Use environment variable with fallback to localhost for development
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// API_BASE = base server URL (for static files like /uploads)
+// API_BASE_URL = API endpoint base (includes /api prefix)
+export const API_BASE = 'http://localhost:3000';
+const API_BASE_URL = 'http://localhost:3000/api';
 
 const api = axios.create({
     baseURL: API_BASE_URL,
@@ -64,7 +66,8 @@ export const projectAPI = {
     deleteIncome: (id) => api.delete(`/incomes/${id}`),
 
     // Expenses
-    getExpenseCodes: () => api.get('/expenses/codes'),
+    getExpenseCodes: () => api.get('/expenses/codes'),      // backward compat
+    getAccountCodes: () => api.get('/expenses/account-codes'), // new naming
     getAllExpenses: () => api.get('/expenses'),
     getExpensesByProject: (projectCode) => api.get(`/expenses/project/${projectCode}`),
     createExpense: (data) => api.post('/expenses', data),
@@ -91,6 +94,21 @@ export const projectAPI = {
     getRoles: () => api.get('/common/roles'),
     getProjectTypes: () => api.get('/common/project-types'),
     getFinancialStatuses: (category) => api.get(`/common/financial-statuses?category=${category}`),
+
+    // Member Documents
+    getMemberDocuments: (memberId) => api.get(`/uploads/members/${memberId}/documents`),
+    uploadMemberDocument: (memberId, formData) => api.post(`/uploads/members/${memberId}/documents`, formData, {
+        headers: { 'Content-Type': undefined }
+    }),
+    deleteMemberDocument: (docId) => api.delete(`/uploads/documents/${docId}`),
+
+    // Expense Attachments
+    getExpenseAttachments: (expenseId) => api.get(`/uploads/expenses/${expenseId}/attachments`),
+    uploadExpenseAttachment: (expenseId, formData) => api.post(`/expenses/${expenseId}/attachments`, formData, {
+        headers: { 'Content-Type': undefined }
+    }),
+    linkMemberDocToExpense: (expenseId, memberDocId) => api.post(`/uploads/expenses/${expenseId}/link-member-doc`, { member_doc_id: memberDocId }),
+    deleteExpenseAttachment: (attachmentId) => api.delete(`/expenses/attachments/${attachmentId}`),
 };
 
 export default api;

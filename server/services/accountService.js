@@ -89,21 +89,37 @@ const deleteAccount = async (id) => {
 
 // GET account transactions
 const getAccountTransactions = async (id, limit = 20) => {
-    const query = `
+    // 1. Get account info to match by account_number for expenses
+    const accountRes = await db.query('SELECT account_number FROM financial_accounts WHERE id = $1', [id]);
+    const accountNumber = accountRes.rows[0]?.account_number;
+
+    // Base query for incomes (linked by account_id)
+    let query = `
         SELECT 
             'income' as type, id, date, description, amount, status 
         FROM incomes 
         WHERE account_id = $1
-        UNION ALL
-        SELECT 
-            'expense' as type, id, payment_date as date, description, net_amount as amount, status 
-        FROM expenses 
-        WHERE account_id = $1 AND (status = 'paid' OR status = 'จ่ายแล้ว' OR status = 'Paid')
-        ORDER BY date DESC NULLS LAST
-        LIMIT $2
     `;
 
-    const result = await db.query(query, [id, limit]);
+    // Add expenses query if we have an account number to match
+    const queryParams = [id];
+
+    if (accountNumber) {
+        query += `
+            UNION ALL
+            SELECT 
+                'expense' as type, id, issue_date as date, description, net_amount as amount, internal_status as status 
+            FROM expenses 
+            WHERE bank_account_number = $2
+        `;
+        queryParams.push(accountNumber);
+    }
+
+    // Add ordering and limit
+    query += ` ORDER BY date DESC NULLS LAST LIMIT $${queryParams.length + 1}`;
+    queryParams.push(limit);
+
+    const result = await db.query(query, queryParams);
     return result.rows;
 };
 

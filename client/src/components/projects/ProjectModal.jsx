@@ -4,7 +4,7 @@ import FormDropdown from '../common/FormDropdown';
 import DatePicker from '../common/DatePicker';
 
 import { projectAPI } from '../../services/api';
-import { Plus, Save, Briefcase, Users, Globe, Gift, Calendar, Folder } from 'lucide-react';
+import { Plus, Save, Briefcase, Users, Globe, Gift, Calendar, Folder, Building2, Landmark, Layers, TrendingUp, GraduationCap } from 'lucide-react';
 import { useSettings } from '../../contexts/SettingsContext';
 
 /**
@@ -22,8 +22,10 @@ const getTypeIcon = (type) => {
         case 'In-House': return <Users className="w-8 h-8 text-blue-500" />;
         case 'Consult': return <Briefcase className="w-8 h-8 text-purple-500" />;
         case 'Public': return <Globe className="w-8 h-8 text-green-500" />;
-        case 'Event': return <Calendar className="w-8 h-8 text-orange-500" />;
-        case 'Gift': return <Gift className="w-8 h-8 text-pink-500" />;
+        case 'Central': return <Landmark className="w-8 h-8 text-gray-500" />;
+        case 'MORE': return <Layers className="w-8 h-8 text-yellow-500" />;
+        case 'Salevity': return <TrendingUp className="w-8 h-8 text-red-500" />;
+        case 'TMT': return <GraduationCap className="w-8 h-8 text-indigo-500" />;
         default: return <Folder className="w-8 h-8 text-gray-500" />;
     }
 };
@@ -36,7 +38,6 @@ const ProjectModal = ({
     project
 }) => {
     const isEditMode = mode === 'edit';
-    const { getProjectStatusOptions } = useSettings();
 
     const initialFormState = {
         projectCode: '',
@@ -56,20 +57,17 @@ const ProjectModal = ({
     const [step, setStep] = useState(1); // 1: Type Selection, 2: Form
     const [formData, setFormData] = useState(initialFormState);
     const [errors, setErrors] = useState({});
-    const [products, setProducts] = useState([]);
     const [projects, setProjects] = useState([]);
     const [projectTypes, setProjectTypes] = useState([]);
 
-    // Fetch master data (products and existing projects for code gen)
+    // Fetch master data (existing projects for code gen)
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [productRes, projectRes, typesRes] = await Promise.all([
-                    projectAPI.getAllProducts(),
+                const [projectRes, typesRes] = await Promise.all([
                     projectAPI.getAllProjects(),
                     projectAPI.getProjectTypes()
                 ]);
-                setProducts(productRes.data || []);
                 setProjects(projectRes.data || []);
                 if (typesRes.data && typesRes.data.length > 0) {
                     setProjectTypes(typesRes.data);
@@ -84,7 +82,6 @@ const ProjectModal = ({
     // Load project data when modal opens
     useEffect(() => {
         if (isOpen) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
             setErrors({});
             if (isEditMode && project) {
                 // Edit Mode: Go straight to form
@@ -93,7 +90,7 @@ const ProjectModal = ({
                     projectCode: project.projectCode || '',
                     projectName: project.projectName || '',
                     productCode: project.productCode || '',
-                    company: project.company || '',
+                    company: project.company || '', // Customer
                     participantCount: project.participantCount ? String(project.participantCount) : '',
                     projectType: project.projectType || 'In-House',
                     status: project.status || 'Active',
@@ -114,11 +111,17 @@ const ProjectModal = ({
     // Auto-generate project code (Add mode only, when step 2 active)
     useEffect(() => {
         if (!isEditMode && formData.projectType && isOpen && step === 2) {
-            const prefix = formData.projectType === 'In-House' ? 'INHOUSE' :
-                formData.projectType === 'Public' ? 'PUBLIC' :
-                    formData.projectType === 'Event' ? 'EVENT' :
-                        formData.projectType === 'Gift' ? 'GIFT' :
-                            formData.projectType === 'Consult' ? 'CONSULT' : 'OTHER';
+            let prefix = 'OTHER';
+            switch (formData.projectType) {
+                case 'In-House': prefix = 'INHOUSE'; break;
+                case 'Public': prefix = 'PUBLIC'; break;
+                case 'Consult': prefix = 'CONSULT'; break;
+                case 'Central': prefix = 'CENTRAL'; break;
+                case 'MORE': prefix = 'MORE'; break;
+                case 'Salevity': prefix = 'SALE'; break;
+                case 'TMT': prefix = 'TMT'; break;
+                default: prefix = 'OTHER';
+            }
 
             // Filter real projects
             const existingCodes = projects
@@ -129,9 +132,8 @@ const ProjectModal = ({
                 });
 
             const nextNumber = existingCodes.length > 0 ? Math.max(...existingCodes) + 1 : 1;
-            const newCode = `${prefix}${String(nextNumber).padStart(5, '0')} `;
+            const newCode = `${prefix}${String(nextNumber).padStart(5, '0')}`;
 
-            // eslint-disable-next-line react-hooks/set-state-in-effect
             setFormData(prev => ({ ...prev, projectCode: newCode }));
         }
     }, [formData.projectType, isOpen, isEditMode, step, projects]);
@@ -145,16 +147,7 @@ const ProjectModal = ({
     };
 
     const handleFieldChange = (name, value) => {
-        setFormData(prev => {
-            const newData = { ...prev, [name]: value };
-
-            // If startDate changes, auto-set endDate to same date (user can change later)
-            if (name === 'startDate' && value) {
-                newData.endDate = value;
-            }
-
-            return newData;
-        });
+        setFormData(prev => ({ ...prev, [name]: value }));
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
         }
@@ -172,48 +165,10 @@ const ProjectModal = ({
 
     const validate = () => {
         const newErrors = {};
-        const type = formData.projectType;
 
-        // Common validation
         if (!formData.projectName.trim()) newErrors.projectName = 'กรุณากรอกชื่อโปรเจค';
-
-        // In-House specific
-        if (type === 'In-House') {
-            if (!formData.productCode) newErrors.productCode = 'กรุณาเลือกหลักสูตร';
-            if (!formData.company.trim()) newErrors.company = 'กรุณากรอกชื่อลูกค้า/บริษัท';
-            if (!formData.participantCount || parseInt(formData.participantCount) <= 0) {
-                newErrors.participantCount = 'กรุณากรอกจำนวนผู้เข้าร่วม';
-            }
-            if (!formData.startDate) newErrors.startDate = 'กรุณาเลือกวันเริ่มต้น';
-            if (!formData.endDate) newErrors.endDate = 'กรุณาเลือกวันสิ้นสุด';
-            if (!formData.location.trim()) newErrors.location = 'กรุณากรอกสถานที่';
-        }
-
-        // Public specific
-        if (type === 'Public') {
-            if (!formData.productCode) newErrors.productCode = 'กรุณาเลือกหลักสูตร';
-            if (!formData.startDate) newErrors.startDate = 'กรุณาเลือกวันเริ่มต้น';
-            if (!formData.endDate) newErrors.endDate = 'กรุณาเลือกวันสิ้นสุด';
-            if (!formData.location.trim()) newErrors.location = 'กรุณากรอกสถานที่';
-        }
-
-        // Consult specific
-        if (type === 'Consult') {
-            if (!formData.company.trim()) newErrors.company = 'กรุณากรอกชื่อลูกค้า/บริษัท';
-            if (!formData.startDate) newErrors.startDate = 'กรุณาเลือกวันเริ่มต้น';
-            if (!formData.endDate) newErrors.endDate = 'กรุณาเลือกวันสิ้นสุด';
-        }
-
-        const isEventOrGift = type === 'Event' || type === 'Gift';
-        if (isEventOrGift || type === 'Other') {
-            if (!formData.startDate) newErrors.startDate = 'กรุณาเลือกวันเริ่มต้น';
-            if (!formData.endDate) newErrors.endDate = 'กรุณาเลือกวันสิ้นสุด';
-        }
-
-        // Date validation
-        if (formData.startDate && formData.endDate && formData.startDate > formData.endDate) {
-            newErrors.endDate = 'วันสิ้นสุดต้องหลังวันเริ่มต้น';
-        }
+        if (!formData.startDate) newErrors.startDate = 'กรุณาเลือกวันเริ่มต้น';
+        // Note: Project Code is auto-generated/readonly, Project Type is selected in Step 1.
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -223,20 +178,20 @@ const ProjectModal = ({
         e.preventDefault();
         if (validate()) {
             try {
-                // Map to snake_case for Server
+                // Map to snake_case for Server (Lightweight payload)
                 const payload = {
                     project_code: formData.projectCode,
                     project_name: formData.projectName,
-                    product_code: formData.productCode || null,
-                    customer_name: formData.company || null,
+                    product_code: null, // Removed
+                    customer_name: formData.company || null, // Optional Customer
                     project_type: formData.projectType,
-                    status: formData.status,
+                    status: formData.status || 'Active',
                     start_date: formData.startDate || null,
-                    end_date: formData.endDate || null,
-                    location: formData.location || null,
-                    description: formData.description || null,
-                    budget: formData.budget ? parseFloat(formData.budget) : null,
-                    participant_count: formData.participantCount ? parseInt(formData.participantCount) : null,
+                    end_date: null, // Removed
+                    location: null, // Removed
+                    description: null, // Removed
+                    budget: null, // Removed
+                    participant_count: null, // Removed
                     created_by: 1 // Default
                 };
 
@@ -268,29 +223,20 @@ const ProjectModal = ({
         value: t.value || t.name,
         label: t.label || t.name
     })) : [
-        { value: 'Consult', label: 'Consult' },
         { value: 'In-House', label: 'In-House' },
         { value: 'Public', label: 'Public' },
-        { value: 'Event', label: 'Event' },
-        { value: 'Gift', label: 'Gift' },
-        { value: 'Other', label: 'Other' }
+        { value: 'Consult', label: 'Consult' },
+        { value: 'Central', label: 'ส่วนกลาง' },
+        { value: 'MORE', label: 'MORE' },
+        { value: 'Salevity', label: 'Salevity' },
+        { value: 'TMT', label: 'TMT' }
     ];
-
-    const productOptions = products.map(p => ({
-        value: p.code,
-        label: p.name
-    }));
-
-    const isInHouse = formData.projectType === 'In-House';
-    const isPublic = formData.projectType === 'Public';
-    const isConsult = formData.projectType === 'Consult';
-    const isEventOrGift = formData.projectType === 'Event' || formData.projectType === 'Gift';
 
     // Step 1: Type Selection View
     const renderTypeSelection = () => (
         <div className="p-1">
             <h3 className="text-lg font-medium text-gray-800 mb-4 text-center">เลือกประเภทโปรเจค</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {projectTypeOptions.map((type) => (
                     <button
                         key={type.value}
@@ -308,11 +254,11 @@ const ProjectModal = ({
         </div>
     );
 
-    // Step 2: Form View
+    // Step 2: Form View (Lightweight)
     const renderForm = () => (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
             {!isEditMode && (
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
                     <button
                         type="button"
                         onClick={handleBack}
@@ -322,9 +268,9 @@ const ProjectModal = ({
                             <path d="M19 12H5M12 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                    <span className="text-sm font-medium text-gray-500">
                         {projectTypeOptions.find(t => t.value === formData.projectType)?.label} Project
-                    </h3>
+                    </span>
                 </div>
             )}
 
@@ -332,12 +278,10 @@ const ProjectModal = ({
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">ประเภทโปรเจค</label>
-                    <input
-                        type="text"
-                        value={formData.projectType}
-                        readOnly
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
-                    />
+                    <div className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-gray-600">
+                        {getTypeIcon(formData.projectType)}
+                        <span className="text-sm font-medium">{projectTypeOptions.find(t => t.value === formData.projectType)?.label || formData.projectType}</span>
+                    </div>
                 </div>
 
                 <div>
@@ -351,93 +295,35 @@ const ProjectModal = ({
                 </div>
             </div>
 
-            {/* Row 2: Product Selection (In-House & Public only) */}
-            {(isInHouse || isPublic) && (
-                <div>
-                    <FormDropdown
-                        label="หลักสูตร/Product *"
-                        value={formData.productCode}
-                        options={productOptions}
-                        onChange={(val) => handleFieldChange('productCode', val)}
-                        hasError={!!errors.productCode}
-                        colorTheme="blue"
-                        placeholder="เลือกหลักสูตร"
-                    />
-                    {errors.productCode && <p className="text-red-500 text-xs mt-1">{errors.productCode}</p>}
-                </div>
-            )}
-
-            {/* Row 3: Project Name */}
+            {/* Row 2: Project Name */}
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อโปรเจค *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อโปรเจค <span className="text-red-500">*</span></label>
                 <input
                     type="text"
                     name="projectName"
                     value={formData.projectName}
                     onChange={handleChange}
-                    placeholder={isEventOrGift ? "ชื่องาน Event/Gift" : ""}
+                    placeholder="ระบุชื่อโปรเจค"
                     className={inputClass('projectName')}
+                    autoFocus
                 />
                 {errors.projectName && <p className="text-red-500 text-xs mt-1">{errors.projectName}</p>}
             </div>
 
-            {/* Customer Info (In-House & Consult) */}
-            {(isInHouse || isConsult) && (
-                <div className={isInHouse ? "grid grid-cols-2 gap-4" : ""}>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">ลูกค้า/บริษัท *</label>
-                        <input
-                            type="text"
-                            name="company"
-                            value={formData.company}
-                            onChange={handleChange}
-                            placeholder="กรอกชื่อบริษัท"
-                            className={inputClass('company')}
-                        />
-                        {errors.company && <p className="text-red-500 text-xs mt-1">{errors.company}</p>}
-                    </div>
-                    {isInHouse && (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">จำนวนผู้เข้าร่วม (คน) *</label>
-                            <input
-                                type="number"
-                                name="participantCount"
-                                value={formData.participantCount}
-                                onChange={handleChange}
-                                placeholder="กรอกจำนวนผู้เข้าร่วม"
-                                className={inputClass('participantCount')}
-                            />
-                            {errors.participantCount && <p className="text-red-500 text-xs mt-1">{errors.participantCount}</p>}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Status (all types) */}
+            {/* Row 3: Customer & Start Date */}
             <div className="grid grid-cols-2 gap-4">
-                <FormDropdown
-                    label="สถานะ *"
-                    value={formData.status}
-                    options={getProjectStatusOptions()}
-                    onChange={(val) => handleFieldChange('status', val)}
-                    colorTheme="blue"
-                />
-                {/* Budget (optional for all) */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">งบประมาณ (บาท)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">ลูกค้า (ถ้ามี)</label>
                     <input
-                        type="number"
-                        name="budget"
-                        value={formData.budget}
+                        type="text"
+                        name="company"
+                        value={formData.company}
                         onChange={handleChange}
-                        className={inputClass('budget')}
-                        step="0.01"
+                        placeholder="ชื่อลูกค้า / บริษัท"
+                        className={inputClass('company')}
                     />
                 </div>
-            </div>
 
-            {/* Dates (All Types) */}
-            <div className="grid grid-cols-2 gap-4">
                 <div>
                     <DatePicker
                         label="วันเริ่มต้น *"
@@ -445,55 +331,13 @@ const ProjectModal = ({
                         onChange={(val) => handleFieldChange('startDate', val)}
                         hasError={!!errors.startDate}
                         colorTheme="blue"
-                        disablePast={true}
                     />
                     {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate}</p>}
                 </div>
-                <div>
-                    <DatePicker
-                        label="วันสิ้นสุด *"
-                        value={formData.endDate}
-                        onChange={(val) => handleFieldChange('endDate', val)}
-                        hasError={!!errors.endDate}
-                        colorTheme="blue"
-                        minDate={formData.startDate || null}
-                        disablePast={true}
-                    />
-                    {errors.endDate && <p className="text-red-500 text-xs mt-1">{errors.endDate}</p>}
-                </div>
-            </div>
-
-            {/* Location (In-House & Public) */}
-            {(isInHouse || isPublic) && (
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">สถานที่ *</label>
-                    <input
-                        type="text"
-                        name="location"
-                        value={formData.location}
-                        onChange={handleChange}
-                        placeholder="กรอกสถานที่"
-                        className={inputClass('location')}
-                    />
-                    {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}
-                </div>
-            )}
-
-            {/* Description (optional for all) */}
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">หมายเหตุ</label>
-                <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows={2}
-                    className={inputClass('description')}
-                    placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)"
-                />
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+            <div className="flex justify-end gap-3 pt-4 mt-6 border-t border-gray-100">
                 <button
                     type="button"
                     onClick={onClose}
@@ -503,10 +347,10 @@ const ProjectModal = ({
                 </button>
                 <button
                     type="submit"
-                    className="px-5 py-2.5 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
+                    className="px-5 py-2.5 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 shadow-sm"
                 >
                     {isEditMode ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                    บันทึก
+                    {isEditMode ? 'บันทึกการแก้ไข' : 'สร้างโปรเจค'}
                 </button>
             </div>
         </form>
@@ -516,8 +360,8 @@ const ProjectModal = ({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title={isEditMode ? 'แก้ไขโปรเจค' : (step === 1 ? 'สร้างโปรเจคใหม่' : 'กรอกข้อมูลโปรเจค')}
-            size="lg"
+            title={isEditMode ? 'แก้ไขโปรเจค' : (step === 1 ? 'สร้างโปรเจคใหม่' : 'รายละเอียดเบื้องต้น')}
+            size={step === 1 ? "lg" : "md"}
         >
             {step === 1 ? renderTypeSelection() : renderForm()}
         </Modal>

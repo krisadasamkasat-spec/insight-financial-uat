@@ -167,35 +167,6 @@ function FinancialCalendar({ onIncomeUpdate, incomes = [] }) {
                 <h3 className="text-xs font-semibold text-gray-700">คาดการณ์รายรับ</h3>
             </div>
 
-            {/* Filter Toggles */}
-            <div className="flex flex-wrap gap-1.5 mb-4">
-                {projectTypes.map(type => {
-                    const isSelected = selectedTypes.includes(type.value);
-                    const style = getTypeStyle(type.value);
-
-                    return (
-                        <button
-                            key={type.value}
-                            onClick={() => toggleTypeFilter(type.value)}
-                            className={`
-                                inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium
-                                transition-all duration-200 ease-out
-                                ${isSelected
-                                    ? `${style.bg} ${style.text} shadow-sm hover:shadow-md hover:scale-[1.02]`
-                                    : 'bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-500'
-                                }
-                            `}
-                            title={isSelected ? `ซ่อน ${type.label}` : `แสดง ${type.label}`}
-                        >
-                            <span className={`w-2 h-2 rounded-full transition-colors ${isSelected ? style.dot : 'bg-gray-300'}`}></span>
-                            <span>{type.label}</span>
-                            {isSelected && (
-                                <Check className="w-3 h-3 opacity-60" />
-                            )}
-                        </button>
-                    );
-                })}
-            </div>
 
             {/* Calendar */}
             <CalendarHub

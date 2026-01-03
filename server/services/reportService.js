@@ -6,7 +6,7 @@ const getAvailableYears = async () => {
         "SELECT DISTINCT EXTRACT(YEAR FROM date) as year FROM incomes ORDER BY year DESC"
     );
     const expenseYears = await db.query(
-        "SELECT DISTINCT EXTRACT(YEAR FROM payment_date) as year FROM expenses WHERE payment_date IS NOT NULL ORDER BY year DESC"
+        "SELECT DISTINCT EXTRACT(YEAR FROM issue_date) as year FROM expenses WHERE issue_date IS NOT NULL ORDER BY year DESC"
     );
 
     const years = new Set([
@@ -36,25 +36,25 @@ const getReportSummary = async (year) => {
     // Monthly Expense
     const monthlyExpenseRes = await db.query(`
         SELECT 
-            EXTRACT(MONTH FROM payment_date) as month,
+            EXTRACT(MONTH FROM issue_date) as month,
             COUNT(*) as count,
             COALESCE(SUM(net_amount), 0) as total_amount
         FROM expenses
-        WHERE EXTRACT(YEAR FROM payment_date) = $1
+        WHERE EXTRACT(YEAR FROM issue_date) = $1
         GROUP BY month
     `, [year]);
 
     // Expenses by Category
     const expensesByCategoryRes = await db.query(`
         SELECT 
-            e.expense_code,
+            e.account_code,
             ec.title as category_name,
             COUNT(*) as count,
             COALESCE(SUM(e.net_amount), 0) as total_amount
         FROM expenses e
-        LEFT JOIN expense_codes ec ON e.expense_code = ec.code
-        WHERE EXTRACT(YEAR FROM e.payment_date) = $1
-        GROUP BY e.expense_code, ec.title
+        LEFT JOIN account_codes ec ON e.account_code = ec.code
+        WHERE EXTRACT(YEAR FROM e.issue_date) = $1
+        GROUP BY e.account_code, ec.title
         ORDER BY total_amount DESC
     `, [year]);
 
@@ -84,8 +84,8 @@ const getReportSummary = async (year) => {
     }
 
     const expensesByCategory = expensesByCategoryRes.rows.map(r => ({
-        expenseCode: r.expense_code,
-        title: r.category_name || r.expense_code,
+        expenseCode: r.account_code,
+        title: r.category_name || r.account_code,
         count: parseInt(r.count),
         totalAmount: parseFloat(r.total_amount)
     }));

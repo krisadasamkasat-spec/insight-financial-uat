@@ -24,7 +24,7 @@ const getDashboardStats = async () => {
             SELECT 
                 COUNT(*) as total,
                 COALESCE(SUM(net_amount), 0) as total_amount,
-                COUNT(CASE WHEN status = 'สำรองจ่าย' THEN 1 END) as pending
+                COUNT(CASE WHEN internal_status LIKE '%รอ%' OR expense_type = 'เบิกที่สำรองจ่าย' THEN 1 END) as pending
             FROM expenses
         `);
         const expenseStats = expenseStatsRes.rows[0];

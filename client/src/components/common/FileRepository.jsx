@@ -8,9 +8,26 @@ import { X, FileText, Image, Eye } from 'lucide-react';
 const FileRepository = ({ isOpen, onClose, documents = [] }) => {
     if (!isOpen) return null;
 
+    // Construct the full URL for a file
+    const getFileUrl = (file) => {
+        if (file.url) return file.url;
+        if (file.file_path) {
+            // If file_path is relative, prepend the API base
+            if (file.file_path.startsWith('http')) return file.file_path;
+            return `http://localhost:3000${file.file_path.startsWith('/') ? '' : '/'}${file.file_path}`;
+        }
+        return null;
+    };
+
+    // Get file name with fallback
+    const getFileName = (file) => {
+        return file.file_name || file.name || 'Unknown file';
+    };
+
     // Get file type icon based on file extension or type
     const getFileIcon = (file) => {
-        const ext = file.type?.toLowerCase() || file.name?.split('.').pop()?.toLowerCase() || '';
+        const fileName = getFileName(file);
+        const ext = file.type?.toLowerCase() || fileName?.split('.').pop()?.toLowerCase() || '';
 
         // PDF
         if (ext === 'pdf' || ext.includes('pdf')) {
@@ -54,7 +71,8 @@ const FileRepository = ({ isOpen, onClose, documents = [] }) => {
 
     // Check if file is an image
     const isImage = (file) => {
-        const ext = file.type?.toLowerCase() || file.name?.split('.').pop()?.toLowerCase() || '';
+        const fileName = getFileName(file);
+        const ext = file.type?.toLowerCase() || fileName?.split('.').pop()?.toLowerCase() || '';
         return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'image'].some(t => ext.includes(t));
     };
 
@@ -98,44 +116,55 @@ const FileRepository = ({ isOpen, onClose, documents = [] }) => {
                         </div>
                     ) : (
                         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                            {documents.map((doc, index) => (
-                                <div
-                                    key={index}
-                                    className="group relative bg-gray-50 rounded-xl overflow-hidden border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all cursor-pointer aspect-square"
-                                    title={doc.name}
-                                >
-                                    {/* File Preview */}
-                                    {isImage(doc) && doc.url ? (
-                                        <img
-                                            src={doc.url}
-                                            alt={doc.name}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-                                            {getFileIcon(doc)}
-                                        </div>
-                                    )}
+                            {documents.map((doc, index) => {
+                                const fileName = getFileName(doc);
+                                const fileUrl = getFileUrl(doc);
 
-                                    {/* File Type Badge */}
-                                    <div className="absolute bottom-2 right-2">
-                                        {isImage(doc) ? (
-                                            <div className="w-6 h-6 bg-pink-100 rounded flex items-center justify-center">
-                                                <Image className="w-3 h-3 text-pink-500" />
-                                            </div>
+                                return (
+                                    <a
+                                        key={index}
+                                        href={fileUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="group relative bg-gray-50 rounded-xl overflow-hidden border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all cursor-pointer aspect-square"
+                                        title={fileName}
+                                    >
+                                        {/* File Preview */}
+                                        {isImage(doc) && fileUrl ? (
+                                            <img
+                                                src={fileUrl}
+                                                alt={fileName}
+                                                className="w-full h-full object-cover"
+                                            />
                                         ) : (
-                                            getFileIcon(doc)
+                                            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-2">
+                                                {getFileIcon(doc)}
+                                                <span className="text-[10px] text-gray-500 mt-2 text-center line-clamp-2 px-1">
+                                                    {fileName}
+                                                </span>
+                                            </div>
                                         )}
-                                    </div>
 
-                                    {/* Hover Overlay */}
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                        <div className="bg-white rounded-full p-2 shadow-lg">
-                                            <Eye className="w-4 h-4 text-blue-500" />
+                                        {/* File Type Badge */}
+                                        <div className="absolute bottom-2 right-2">
+                                            {isImage(doc) ? (
+                                                <div className="w-6 h-6 bg-pink-100 rounded flex items-center justify-center">
+                                                    <Image className="w-3 h-3 text-pink-500" />
+                                                </div>
+                                            ) : (
+                                                getFileIcon(doc)
+                                            )}
                                         </div>
-                                    </div>
-                                </div>
-                            ))}
+
+                                        {/* Hover Overlay */}
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                            <div className="bg-white rounded-full p-2 shadow-lg">
+                                                <Eye className="w-4 h-4 text-blue-500" />
+                                            </div>
+                                        </div>
+                                    </a>
+                                );
+                            })}
                         </div>
                     )}
                 </div>

@@ -1,9 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Download, FileText } from 'lucide-react';
 import Modal from './Modal';
+import { API_BASE } from '../../services/api';
 
 
 const ViewAttachmentsModal = ({ isOpen, onClose, attachments = [], title = "เอกสารแนบ" }) => {
+    const [imgError, setImgError] = useState({});
+
+    // Reset error state when modal opens or attachments change
+    React.useEffect(() => {
+        if (isOpen) {
+            setImgError({});
+        }
+    }, [isOpen, attachments]);
+
     // Get file icon based on file type
     const getFileIcon = (fileName) => {
         const ext = fileName?.split('.').pop()?.toLowerCase();
@@ -51,7 +61,7 @@ const ViewAttachmentsModal = ({ isOpen, onClose, attachments = [], title = "เ�
     const handleDownload = (attachment) => {
         // In a real app, this would trigger a download
         // For now, just show an alert
-        alert(`จะดาวน์โหลดไฟล์: ${attachment.name || attachment}`);
+        alert(`จะดาวน์โหลดไฟล์: ${attachment.name || attachment.file_name || attachment}`);
     };
 
     return (
@@ -69,7 +79,7 @@ const ViewAttachmentsModal = ({ isOpen, onClose, attachments = [], title = "เ�
                         {/* File List */}
                         <div className="space-y-2 max-h-[400px] overflow-y-auto">
                             {attachments.map((attachment, index) => {
-                                const fileName = typeof attachment === 'string' ? attachment : attachment.name;
+                                const fileName = typeof attachment === 'string' ? attachment : (attachment.name || attachment.file_name || 'Unknown file');
                                 const fileSize = typeof attachment === 'object' ? attachment.size : null;
                                 const { bg, icon } = getFileIcon(fileName);
 
@@ -80,7 +90,16 @@ const ViewAttachmentsModal = ({ isOpen, onClose, attachments = [], title = "เ�
                                     >
                                         {/* Icon */}
                                         <div className={`w-10 h-10 ${bg} rounded-lg flex items-center justify-center`}>
-                                            <span className="text-lg">{icon}</span>
+                                            {['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileName?.split('.').pop()?.toLowerCase()) && attachment.file_path && !imgError[index] ? (
+                                                <img
+                                                    src={`${API_BASE}/${attachment.file_path.replace(/^\//, '')}`}
+                                                    alt={fileName}
+                                                    className="w-10 h-10 object-cover rounded-lg border border-gray-200"
+                                                    onError={() => setImgError(prev => ({ ...prev, [index]: true }))}
+                                                />
+                                            ) : (
+                                                <span className="text-lg">{icon}</span>
+                                            )}
                                         </div>
 
                                         {/* File Info */}
