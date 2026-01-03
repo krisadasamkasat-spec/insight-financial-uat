@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { HandCoins, FileUser } from 'lucide-react';
 import CalendarHub from './CalendarHub';
 import ProjectInfo from '../projects/ProjectInfo';
 import FileRepository from '../common/FileRepository';
@@ -100,6 +101,7 @@ const PaymentCycleExpenseCard = ({
 
     return (
         <>
+
             <div className={`flex justify-between bg-white p-5 font-sans transition-colors duration-200 hover:bg-gray-50 border-b border-gray-100 ${isSelected ? 'bg-blue-50/50' : ''}`}>
                 <div className="flex gap-4 flex-1">
                     {/* Checkbox */}
@@ -114,117 +116,106 @@ const PaymentCycleExpenseCard = ({
                         </div>
                     )}
 
-                    <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-                        {/* Row 1: Project Code | Expense Code | Account Title - BOLD 16px */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <button
-                                onClick={() => setShowProjectDetails(true)}
-                                className="font-bold text-[16px] text-blue-600 hover:text-blue-700 hover:underline transition-colors cursor-pointer"
-                            >
-                                {projectCode}
-                            </button>
-                            <span className="text-gray-300 text-[16px]">|</span>
-                            <span className="text-gray-600 font-mono text-[16px] font-semibold">
-                                {expenseCode}
-                            </span>
-                            <span className="text-gray-300 text-[16px]">|</span>
-                            <span className="text-gray-600 text-[16px] font-semibold truncate max-w-[250px]" title={data.account_title}>
-                                {data.account_title || '-'}
-                            </span>
+                    {/* Left Content Column */}
+                    <div className="flex flex-col gap-[16px] flex-1 min-w-0">
+                        {/* BLACK BOX GROUP: Top Row + Description (Gap 4px) */}
+                        <div className="flex flex-col gap-[4px]">
+                            {/* Row 1: Project Code | Expense Code | Account Title */}
+                            {/* Header: font-size 16px, color #202224. Project Code (Bold), Expense Code (Normal), Account Title (Normal) */}
+                            <div className="flex items-center gap-2 flex-wrap text-[16px] text-[#202224]">
+                                <button
+                                    onClick={() => setShowProjectDetails(true)}
+                                    className="font-bold underline hover:text-gray-700 transition-colors cursor-pointer"
+                                >
+                                    {projectCode}
+                                </button>
+                                <span className="text-[#202224]">|</span>
+                                <span className="font-normal">
+                                    {expenseCode}
+                                </span>
+                                <span className="text-[#202224]">|</span>
+                                <span className="font-normal truncate max-w-[250px]" title={data.account_title}>
+                                    {data.account_title || '-'}
+                                </span>
+                            </div>
+
+                            {/* Row 2: Description */}
+                            {/* Description: font-size 12px, normal, color #A0AEC0 */}
+                            <div className="text-[12px] font-normal text-[#A0AEC0] line-clamp-1" title={description}>
+                                {description || '-'}
+                            </div>
                         </div>
 
-                        {/* Row 2: Description - 12px */}
-                        <div className="text-[12px] text-gray-500 line-clamp-1" title={description}>
-                            {description || '-'}
-                        </div>
+                        {/* RED BOX GROUP: Status Row + Contact Row (Gap 8px) */}
+                        <div className="flex flex-col gap-[8px]">
+                            {/* Row 3: Type Badge + Payback To/Store */}
+                            {/* Badge Row: font-size 12px, color #202224, normal */}
+                            <div className="flex items-center gap-[8px]">
+                                {category_type === 'เบิกที่สำรองจ่าย' ? (
+                                    <>
+                                        <span className="px-3 py-0.5 rounded-full text-[12px] font-medium bg-[#4285F4] text-white">
+                                            สำรองจ่าย
+                                        </span>
+                                        <div className="flex items-center gap-[8px] text-[12px] text-[#202224] font-normal">
+                                            <HandCoins className="w-6 h-6 text-[#202224]" />
+                                            {data.payback_to || payback_name || '-'}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="px-3 py-0.5 rounded-full text-[12px] font-medium bg-[#00C4B4] text-white">
+                                            วางบิล
+                                        </span>
+                                        <div className="flex items-center gap-[8px] text-[12px] text-[#202224] font-normal">
+                                            <HandCoins className="w-6 h-6 text-[#202224]" />
+                                            {vendor_name || data.contact || '-'}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
 
-                        {/* Row 3: Type Badge + Payback To/Store */}
-                        <div className="flex items-center gap-2 mt-1">
-                            {/* Logic: If expense_type is 'เบิกที่สำรองจ่าย', use Blue badge + User Icon + PaybackTo
-                                      If expense_type is 'วางบิล', use Green badge + Store Icon + Contact */}
-                            {category_type === 'เบิกที่สำรองจ่าย' ? (
-                                <>
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700 border border-blue-200">
-                                        เบิกที่สำรองจ่าย
-                                    </span>
-                                    <div className="flex items-center gap-1.5 text-xs text-gray-700 font-medium">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-500">
-                                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                            <circle cx="12" cy="7" r="4"></circle>
-                                        </svg>
-                                        {/* Show payback_to (person who paid) */}
-                                        {data.payback_to || payback_name || '-'}
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-700 border border-emerald-200">
-                                        วางบิล
-                                    </span>
-                                    <div className="flex items-center gap-1.5 text-xs text-gray-700 font-medium">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-500">
-                                            <path d="M3 21h18" />
-                                            <path d="M5 21V7l8-4 8 4v14" />
-                                            <path d="M17 21v-8H7v8" />
-                                        </svg>
-                                        {/* Show contact (shop name) */}
-                                        {vendor_name || data.contact || '-'}
-                                    </div>
-                                </>
-                            )}
-                        </div>
-
-                        {/* Row 4: Bill Header / Recipient - 12px, format: contact (bold) + (bill_header) */}
-                        <div className="flex items-center gap-1.5 text-[12px] text-gray-500 pl-0.5">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14 2 14 8 20 8"></polyline>
-                                <line x1="16" y1="13" x2="8" y2="13"></line>
-                                <line x1="16" y1="17" x2="8" y2="17"></line>
-                                <polyline points="10 9 9 9 8 9"></polyline>
-                            </svg>
-                            <span className="truncate max-w-[300px]" title={`${data.contact || ''} (${data.bill_header || ''})`}>
-                                <span className="font-semibold text-gray-700">{data.contact || '-'}</span>
-                                {data.bill_header && <span className="font-normal text-gray-400"> ({data.bill_header})</span>}
-                            </span>
+                            {/* Row 4: Bill Header / Recipient */}
+                            {/* User Icon Row: font-size 12px, color #202224. Contact (Bold), Bill Header (Normal) */}
+                            <div className="flex items-center gap-[8px] text-[12px] text-[#202224] pl-0.5">
+                                <FileUser className="w-6 h-6 text-[#202224]" />
+                                <span className="truncate max-w-[300px]" title={`${data.contact || ''} (${data.bill_header || ''})`}>
+                                    <span className="font-bold">{data.contact || '-'}</span>
+                                    {data.bill_header && <span className="font-normal"> ({data.bill_header})</span>}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Right Side - Amounts & Menu */}
                 <div className="flex items-stretch gap-4">
-                    {/* Financials Column */}
-                    <div className="flex flex-col items-end justify-start gap-1 min-w-[120px] pt-1">
-                        {/* Net Amount - Red Bold */}
-                        <div className="flex justify-between w-full items-baseline text-sm">
-                            <span className="text-gray-400 text-xs">Net</span>
-                            <span className="text-red-600 font-bold text-base">{formatNumber(netAmount)}</span>
-                        </div>
+                    {/* Financials Column - Gap 16px (column), 8px (row), Remove pt-1 */}
+                    <div className="grid grid-cols-[auto_auto] justify-end content-start gap-x-[16px] gap-y-[8px] min-w-[120px]">
+                        {/* Net Amount - 16px. Label #202224, Value #FF5757 */}
+                        <span className="text-[16px] text-[#202224] text-right">Net</span>
+                        <span className="text-[16px] text-[#FF5757] font-bold text-right">{formatNumber(netAmount)}</span>
 
-                        {/* Price */}
-                        <div className="flex justify-between w-full items-baseline text-xs">
-                            <span className="text-gray-400">Price</span>
-                            <span className="text-gray-600 font-medium">{formatNumber(priceAmount)}</span>
-                        </div>
+                        {/* Price - 16px #202224 */}
+                        <span className="text-[16px] text-[#202224] text-right">Price</span>
+                        <span className="text-[16px] text-[#202224] font-medium text-right">{formatNumber(priceAmount)}</span>
 
-                        {/* VAT */}
-                        <div className="flex justify-between w-full items-baseline text-xs">
-                            <span className="text-gray-400">VAT</span>
-                            <span className="text-gray-600">
-                                {(vatAmount && vatAmount > 0) ? `7% (${formatNumber(vatAmount)})` : 'N/A'}
-                            </span>
-                        </div>
+                        {/* VAT - 16px #202224 */}
+                        <span className="text-[16px] text-[#202224] text-right">VAT</span>
+                        <span className="text-[16px] text-[#202224] text-right">
+                            {(vatAmount && vatAmount > 0) ? `7% (${formatNumber(vatAmount)})` : 'N/A'}
+                        </span>
 
-                        {/* WHT */}
-                        <div className="flex justify-between w-full items-baseline text-xs">
-                            <span className="text-gray-400">หัก ณ ที่จ่าย</span>
-                            <span className="text-gray-600">
-                                {(whtAmount && whtAmount > 0) ? formatNumber(whtAmount) : 'N/A'}
-                            </span>
-                        </div>
+                        {/* WHT - 16px #202224 */}
+                        <span className="text-[16px] text-[#202224] text-right">หัก ณ ที่จ่าย</span>
+                        <span className="text-[16px] text-[#202224] text-right">
+                            {(whtAmount && whtAmount > 0) ? formatNumber(whtAmount) : 'N/A'}
+                        </span>
 
-                        {/* Issue Date - Below WHT */}
-                        <div className="text-[10px] text-gray-400 mt-1 text-right">
+                        {/* Issue Date - 12px #A0AEC0 - Spanning 2 columns or aligned? Usually aligned. */}
+                        {/* The design often puts Issue Date below. Let's make it span 2 cols or just a separate block if needed. 
+                            But user asked to arrange text labels. Let's keep it in grid for alignment or separate.
+                            Design implies it's just below. Let's span col. */}
+                        <div className="col-span-2 text-[12px] text-[#A0AEC0] text-right mt-1">
                             Issue Date: {formatDate(issueDate || createdAt)}
                         </div>
                     </div>

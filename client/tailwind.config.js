@@ -6,6 +6,9 @@ export default {
     ],
     theme: {
         extend: {
+            fontFamily: {
+                sans: ['"IBM Plex Sans"', 'sans-serif'],
+            },
             // Custom color palette
             colors: {
                 primary: {

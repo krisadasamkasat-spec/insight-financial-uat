@@ -11,8 +11,8 @@ import { useToast } from '../contexts/ToastContext';
 import { List, CheckCircle } from 'lucide-react';
 
 const MONTHS = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
+    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
 ];
 
 const Expenses = () => {
@@ -159,8 +159,9 @@ const Expenses = () => {
 
         const day = date.getDate();
         const month = MONTHS[date.getMonth()];
-        const year = date.getFullYear();
-        return `${day} ${month} ${year}`;
+        const year = date.getFullYear(); // User requested 2025/2026 format which is CE. If BE is needed, +543. 
+        // User example: "5 พฤศจิกายน 2025". This is CE year.
+        return `รอบจ่าย ${day} ${month} ${year}`;
     };
 
     // Filter expenses based on active tab
@@ -468,8 +469,8 @@ const Expenses = () => {
                                             <line x1="8" y1="2" x2="8" y2="6"></line>
                                             <line x1="3" y1="10" x2="21" y2="10"></line>
                                         </svg>
-                                        <span className="text-sm font-bold text-gray-700">
-                                            Cycle: {formatPaymentDate(paymentCycle.paymentDate)}
+                                        <span className="text-sm font-bold text-gray-900">
+                                            {formatPaymentDate(paymentCycle.paymentDate)}
                                         </span>
                                     </div>
                                     <span className="text-xs text-gray-500">
@@ -542,8 +543,8 @@ const Expenses = () => {
                 <button
                     onClick={() => setActiveView('list')}
                     className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${activeView === 'list'
-                            ? 'bg-white text-blue-600 shadow-sm'
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                         }`}
                 >
                     <List className="w-4 h-4" />
@@ -552,8 +553,8 @@ const Expenses = () => {
                 <button
                     onClick={() => setActiveView('approval')}
                     className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${activeView === 'approval'
-                            ? 'bg-white text-emerald-600 shadow-sm'
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                        ? 'bg-white text-emerald-600 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                         }`}
                 >
                     <CheckCircle className="w-4 h-4" />
