@@ -484,12 +484,12 @@ const ProjectDetail = () => {
     ];
     const expenseStatusOptions = [
         { value: 'ส่งเบิกแล้ว รอเอกสารตัวจริง', label: 'รอเอกสาร', color: 'yellow' },
-        { value: 'บัญชีตรวจ และ ได้รับเอกสารตัวจริง', label: 'บัญชีตรวจ', color: 'blue' },
-        { value: 'VP อนุมัติแล้ว ส่งเบิกได้', label: 'VP อนุมัติ', color: 'purple' },
-        { value: 'ส่งเข้า PEAK', label: 'ส่ง PEAK', color: 'indigo' },
-        { value: 'โอนแล้ว รอส่งหลักฐาน', label: 'รอหลักฐาน', color: 'cyan' },
-        { value: 'ส่งหลักฐานแล้ว เอกสารครบ', label: 'เสร็จสิ้น', color: 'emerald' },
-        { value: 'reject ยกเลิก / รอแก้ไข', label: 'ยกเลิก', color: 'red' }
+        { value: 'บัญชีตรวจ และ ได้รับเอกสารตัวจริง', label: 'บัญชีตรวจแล้ว', color: 'blue' },
+        { value: 'VP อนุมัติแล้ว ส่งเบิกได้', label: 'VP อนุมัติแล้ว', color: 'purple' },
+        { value: 'ส่งเข้า PEAK', label: 'ส่งเข้า PEAK', color: 'indigo' },
+        { value: 'โอนแล้ว รอส่งหลักฐาน', label: 'รอส่งหลักฐาน', color: 'cyan' },
+        { value: 'ส่งหลักฐานแล้ว เอกสารครบ', label: 'ส่งหลักฐานแล้ว', color: 'green' },
+        { value: 'reject ยกเลิก / รอแก้ไข', label: 'ยกเลิก / รอแก้ไข', color: 'red' }
     ];
 
 
@@ -835,8 +835,8 @@ const ProjectDetail = () => {
                     <table className="w-full">
                         <thead className="bg-gray-50/80 border-b border-gray-200">
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">รหัส</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">ประเภท</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">รหัส</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">รายละเอียด</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">ผู้รับเงิน</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">กำหนดจ่าย</th>
@@ -848,14 +848,14 @@ const ProjectDetail = () => {
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                             {filteredExpenses.map((expense, idx) => (
-                                <tr key={expense.id || idx} className={`hover:bg-blue-50/30 transition-colors ${idx % 2 === 1 ? 'bg-gray-50/30' : ''}`}>
-                                    <td className="px-4 py-3">
-                                        <span className="text-sm font-medium text-blue-600">{expense.account_code || expense.id}</span>
-                                    </td>
+                                <tr key={expense.id || idx} className={`hover:bg-blue-50/30 transition-colors ${idx % 2 === 1 ? 'bg-gray-50/30' : ''} [&>td]:align-middle`}>
                                     <td className="px-4 py-3">
                                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${expense.expense_type === 'เบิกที่สำรองจ่าย' ? 'bg-orange-50 text-orange-600 border border-orange-200' : 'bg-blue-50 text-blue-600 border border-blue-200'}`}>
                                             {expense.expense_type || 'วางบิล'}
                                         </span>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <span className="text-sm font-medium text-gray-900">{expense.account_code || expense.id}</span>
                                     </td>
                                     <td className="px-4 py-3">
                                         <div className="font-medium text-sm text-gray-900">{expense.account_title || '-'}</div>
@@ -881,7 +881,7 @@ const ProjectDetail = () => {
                                     </td>
                                     <td className="px-4 py-3 text-sm text-gray-500">{formatDateCE(expense.due_date)}</td>
                                     <td className="px-4 py-3 text-right">
-                                        <span className="text-sm font-semibold text-blue-700">฿{formatNumber(expense.net_amount)}</span>
+                                        <span className="text-sm font-semibold text-red-600">฿{formatNumber(expense.net_amount)}</span>
                                     </td>
                                     <td className="px-4 py-3 text-center">
                                         <AttachmentPreview attachments={expense.attachments || []} onOpenModal={() => handleViewAttachments(expense.attachments)} size="sm" />
@@ -890,7 +890,7 @@ const ProjectDetail = () => {
                                         <StatusBadge
                                             status={expense.internal_status}
                                             options={expenseStatusOptions}
-                                            onChange={(s) => handleUpdateExpenseStatus(expense.id, s)}
+                                            readOnly={true}
                                         />
                                     </td>
                                     <td className="px-4 py-3">

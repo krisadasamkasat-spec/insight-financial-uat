@@ -91,22 +91,26 @@ const StatusBadge = ({
 
     if (readOnly) {
         return (
-            <span className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full border ${badgeClasses}`}>
+            <span
+                className={`inline-block px-2.5 py-1 text-xs font-medium rounded-full border truncate max-w-[180px] align-middle ${badgeClasses}`}
+                title={currentOption.value}
+            >
                 {currentOption.label}
             </span>
         );
     }
 
     return (
-        <div className="relative inline-block">
+        <div className="relative inline-block align-middle">
             <button
                 ref={buttonRef}
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full border cursor-pointer transition-all hover:ring-2 hover:ring-offset-1 hover:ring-gray-200 ${badgeClasses}`}
+                className={`inline-flex items-center justify-between gap-1 px-2.5 py-1 text-xs font-medium rounded-full border cursor-pointer transition-all hover:ring-2 hover:ring-offset-1 hover:ring-gray-200 max-w-[180px] ${badgeClasses}`}
+                title={currentOption.value}
             >
-                {currentOption.label}
-                <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <span className="truncate">{currentOption.label}</span>
+                <ChevronDown className={`w-3 h-3 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isOpen && createPortal(

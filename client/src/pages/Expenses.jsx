@@ -229,8 +229,9 @@ const Expenses = () => {
     // Initialize all payment cycles as expanded when data loads
     useEffect(() => {
         if (groupedExpenses.length > 0) {
-            const allCycles = new Set(groupedExpenses.map((_, index) => index));
-            setExpandedPaymentCycles(allCycles);
+            // Use paymentDate as key for expansion state
+            const allCycleKeys = new Set(groupedExpenses.map(g => g.paymentDate));
+            setExpandedPaymentCycles(allCycleKeys);
         }
     }, [groupedExpenses.length]); // Dependency on length ensures run once after grouping
 
@@ -258,18 +259,27 @@ const Expenses = () => {
                     id: e.id,
                     projectCode: e.project_code,
                     expenseCode: e.account_code,
+                    account_title: e.account_title,
                     expenseCategory: e.expense_category,
                     title: e.title || e.description,
                     description: e.description,
                     recipient: e.recipient,
                     status: e.status,
-                    paymentDate: e.payment_date,
+                    paymentDate: e.payment_date || e.due_date,
                     issueDate: e.issue_date,
                     netAmount: parseFloat(e.net_amount) || 0,
                     priceAmount: priceAmt,
                     vatAmount: vatAmt,
                     whtAmount: whtAmt,
-                    attachments: e.attachments || []
+                    attachments: e.attachments || [],
+                    // Preserve all other fields needed for render
+                    createdAt: e.created_at,
+                    category_type: e.expense_type,
+                    expense_type: e.expense_type,
+                    contact: e.contact,
+                    bill_header: e.bill_header,
+                    payback_to: e.payback_to,
+                    reject_reason: e.reject_reason
                 };
             });
             setExpenses(mapped);
@@ -292,12 +302,12 @@ const Expenses = () => {
         setSelectedExpenses(newSelected);
     };
 
-    const handleToggleExpand = (index) => {
+    const handleToggleExpand = (key) => {
         const newExpanded = new Set(expandedPaymentCycles);
-        if (newExpanded.has(index)) {
-            newExpanded.delete(index);
+        if (newExpanded.has(key)) {
+            newExpanded.delete(key);
         } else {
-            newExpanded.add(index);
+            newExpanded.add(key);
         }
         setExpandedPaymentCycles(newExpanded);
     };
@@ -440,7 +450,8 @@ const Expenses = () => {
                     const allExpenses = paymentCycle.expenses;
                     const isAllSelected = allExpenses.every(e => selectedExpenses.has(e.id));
                     const isSomeSelected = allExpenses.some(e => selectedExpenses.has(e.id)) && !isAllSelected;
-                    const isExpanded = expandedPaymentCycles.has(index);
+                    const cycleKey = paymentCycle.paymentDate;
+                    const isExpanded = expandedPaymentCycles.has(cycleKey);
 
                     return (
                         <div key={index} className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
@@ -478,11 +489,11 @@ const Expenses = () => {
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <div className="text-sm text-gray-600">
-                                        Total <span className="font-bold text-red-600 bg-white border border-gray-200 px-2 py-1 rounded-md ml-1">฿{formatNumber(paymentCycle.total)}</span>
+                                    <div className="flex items-center gap-2 text-[16px] text-gray-600">
+                                        Total <span className="font-bold text-red-600">฿{formatNumber(paymentCycle.total)}</span>
                                     </div>
                                     <button
-                                        onClick={() => handleToggleExpand(index)}
+                                        onClick={() => handleToggleExpand(cycleKey)}
                                         className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors"
                                     >
                                         <svg
@@ -533,34 +544,29 @@ const Expenses = () => {
     return (
         <div className="p-8 max-w-[1400px] mx-auto">
             {/* Page Header */}
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">ค่าใช้จ่าย</h1>
-                <p className="text-sm text-gray-500 mt-1">จัดการและอนุมัติรายการค่าใช้จ่ายทั้งหมด</p>
+            <div className="mb-6 flex justify-between items-center">
+                <h1 className="text-2xl font-bold text-gray-900">
+                    {activeView === 'list' ? 'รายการเบิกจ่ายทั้งหมด' : 'อนุมัติเบิกจ่าย'}
+                </h1>
+                <button
+                    onClick={() => setActiveView(activeView === 'list' ? 'approval' : 'list')}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-all shadow-sm"
+                >
+                    {activeView === 'list' ? (
+                        <>
+                            <CheckCircle className="w-4 h-4" />
+                            ไปหน้าอนุมัติ
+                        </>
+                    ) : (
+                        <>
+                            <List className="w-4 h-4" />
+                            กลับหน้ารายการ
+                        </>
+                    )}
+                </button>
             </div>
 
-            {/* Main View Tab Navigation */}
-            <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
-                <button
-                    onClick={() => setActiveView('list')}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${activeView === 'list'
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                        }`}
-                >
-                    <List className="w-4 h-4" />
-                    รายการค่าใช้จ่าย
-                </button>
-                <button
-                    onClick={() => setActiveView('approval')}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${activeView === 'approval'
-                        ? 'bg-white text-emerald-600 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                        }`}
-                >
-                    <CheckCircle className="w-4 h-4" />
-                    อนุมัติเบิกจ่าย
-                </button>
-            </div>
+
 
             {/* View Content */}
             {activeView === 'list' ? (

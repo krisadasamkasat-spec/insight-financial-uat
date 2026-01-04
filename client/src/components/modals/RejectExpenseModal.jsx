@@ -26,8 +26,8 @@ const RejectExpenseModal = ({
             setError('กรุณาระบุเหตุผลในการไม่อนุมัติ');
             return;
         }
-        if (reason.trim().length < 10) {
-            setError('เหตุผลต้องมีอย่างน้อย 10 ตัวอักษร');
+        if (reason.trim().length < 1) {
+            setError('กรุณาระบุเหตุผลในการไม่อนุมัติ');
             return;
         }
 
@@ -80,6 +80,15 @@ const RejectExpenseModal = ({
                         <div className="text-xs text-gray-500 mb-3 line-clamp-1">
                             {expense.description || '-'}
                         </div>
+
+                        {/* New Pay To Field */}
+                        <div className="flex justify-between items-center mb-2 pb-2 border-b border-gray-200 border-dashed">
+                            <span className="text-sm text-gray-500">ผู้รับเงิน</span>
+                            <span className="text-sm font-medium text-gray-800">
+                                {expense.payback_to || expense.contact || '-'}
+                            </span>
+                        </div>
+
                         <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-500">จำนวนเงิน</span>
                             <span className="text-lg font-bold text-red-600">฿{formatNumber(expense.netAmount)}</span>
@@ -99,8 +108,8 @@ const RejectExpenseModal = ({
                             }}
                             placeholder="กรุณาระบุเหตุผลในการไม่อนุมัติรายการนี้..."
                             className={`w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 transition-all resize-none ${error
-                                    ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                                    : 'border-gray-200 focus:ring-red-500 focus:border-red-500'
+                                ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                                : 'border-gray-200 focus:ring-red-500 focus:border-red-500'
                                 }`}
                             rows={4}
                             maxLength={500}
@@ -132,8 +141,8 @@ const RejectExpenseModal = ({
                         onClick={handleSubmit}
                         disabled={isLoading || !reason.trim()}
                         className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${isLoading || !reason.trim()
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'bg-gradient-to-r from-red-500 to-rose-500 text-white hover:from-red-600 hover:to-rose-600 shadow-lg shadow-red-500/30'
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-red-500 to-rose-500 text-white hover:from-red-600 hover:to-rose-600 shadow-lg shadow-red-500/30'
                             }`}
                     >
                         {isLoading ? (

@@ -60,7 +60,7 @@ const MinimalDropdown = ({ label, value, options, onChange, allLabel = "ทั�
                 <button
                     ref={buttonRef}
                     onClick={() => setIsOpen(!isOpen)}
-                    className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-all ${isOpen
+                    className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-all min-w-[80px] ${isOpen
                         ? 'text-gray-900 border-gray-400 bg-gray-50'
                         : 'text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                         }`}
@@ -72,15 +72,26 @@ const MinimalDropdown = ({ label, value, options, onChange, allLabel = "ทั�
                 {isOpen && createPortal(
                     <div
                         id={dropdownId}
-                        className="fixed bg-white rounded-md shadow-lg border border-gray-200 py-1 z-[9999] overflow-hidden min-w-[130px]"
+                        className="fixed bg-white rounded-md shadow-lg border border-gray-200 py-1 z-[9999] w-[220px] max-h-60 overflow-y-auto"
                         style={{
-                            top: position.top - window.scrollY,
+                            top: (() => {
+                                const dropdownHeight = Math.min((options.length + 1) * 36 + 8, 240);
+                                const buttonRect = buttonRef.current?.getBoundingClientRect();
+                                const buttonBottom = buttonRect ? buttonRect.bottom : position.top - window.scrollY;
+                                const buttonTop = buttonRect ? buttonRect.top : position.top - window.scrollY - 40;
+                                const spaceBelow = window.innerHeight - buttonBottom;
+
+                                if (spaceBelow < dropdownHeight) {
+                                    return buttonTop - dropdownHeight;
+                                }
+                                return buttonBottom + 4;
+                            })(),
                             left: position.left
                         }}
                     >
                         <button
                             onClick={() => { onChange('all'); setIsOpen(false); }}
-                            className={`w-full text-left px-4 py-2 text-sm transition-colors ${value === 'all'
+                            className={`w-full text-left px-4 py-2 text-sm transition-colors truncate ${value === 'all'
                                 ? 'bg-blue-600 text-white'
                                 : 'text-gray-700 hover:bg-gray-100'
                                 }`}
@@ -91,7 +102,7 @@ const MinimalDropdown = ({ label, value, options, onChange, allLabel = "ทั�
                             <button
                                 key={option}
                                 onClick={() => { onChange(option); setIsOpen(false); }}
-                                className={`w-full text-left px-4 py-2 text-sm transition-colors ${value === option
+                                className={`w-full text-left px-4 py-2 text-sm transition-colors truncate ${value === option
                                     ? 'bg-blue-600 text-white'
                                     : 'text-gray-700 hover:bg-gray-100'
                                     }`}

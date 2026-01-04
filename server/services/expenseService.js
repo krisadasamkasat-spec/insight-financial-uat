@@ -138,9 +138,10 @@ const updateExpense = async (id, updateData) => {
             'project_code', 'account_code', 'expense_type',
             'contact', 'bill_header', 'description', 'payback_to',
             'bank_name', 'bank_account_number', 'bank_account_name',
-            'phone', 'email', // Added phone/email
+            'phone', 'email',
             'price', 'discount', 'vat_amount', 'wht_amount', 'net_amount',
-            'due_date', 'internal_status', 'peak_status', 'report_month'
+            'due_date', 'internal_status', 'peak_status', 'report_month',
+            'status', 'reject_reason'
         ];
 
         for (const field of fields) {
@@ -169,7 +170,7 @@ const updateExpense = async (id, updateData) => {
 
 // UPDATE expense internal status (workflow)
 const updateExpenseStatus = async (id, updateData) => {
-    const { internal_status, peak_status } = updateData;
+    const { internal_status, peak_status, payment_date, status, reject_reason } = updateData;
 
     const updates = [];
     const params = [];
@@ -183,6 +184,21 @@ const updateExpenseStatus = async (id, updateData) => {
     if (peak_status !== undefined) {
         updates.push(`peak_status = $${paramIdx++}`);
         params.push(peak_status);
+    }
+
+    if (payment_date !== undefined) {
+        updates.push(`payment_date = $${paramIdx++}`);
+        params.push(payment_date);
+    }
+
+    if (status !== undefined) {
+        updates.push(`status = $${paramIdx++}`);
+        params.push(status);
+    }
+
+    if (reject_reason !== undefined) {
+        updates.push(`reject_reason = $${paramIdx++}`);
+        params.push(reject_reason);
     }
 
     updates.push('updated_at = CURRENT_TIMESTAMP');

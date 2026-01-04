@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { FileText, Paperclip, Image, File } from 'lucide-react';
+import { FileText, Image, File, FileCheck, FileX } from 'lucide-react';
 import { API_BASE } from '../../services/api';
 
 /**
@@ -32,7 +32,7 @@ const DropdownPortal = ({ showDropdown, dropdownPosition, handleDropdownMouseEnt
             <div className="bg-gray-800 text-white rounded-lg shadow-xl overflow-hidden min-w-[220px]">
                 {/* Header */}
                 <div className="px-3 py-2 border-b border-gray-700 flex items-center gap-2">
-                    <Paperclip className="w-4 h-4 text-blue-400" />
+                    <FileCheck className="w-4 h-4 text-blue-400" />
                     <span className="font-medium text-sm">
                         {hasAttachments
                             ? `${attachments.length} ไฟล์แนบ`
@@ -74,7 +74,7 @@ const DropdownPortal = ({ showDropdown, dropdownPosition, handleDropdownMouseEnt
                     </div>
                 ) : (
                     <div className="p-4 text-center">
-                        <FileText className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+                        <FileX className="w-8 h-8 text-gray-600 mx-auto mb-2" />
                         <p className="text-xs text-gray-400">ยังไม่มีไฟล์แนบ</p>
                     </div>
                 )}
@@ -127,6 +127,7 @@ const AttachmentPreview = ({
 
     // Handle hover with delay
     const handleMouseEnter = () => {
+        if (!hasAttachments) return; // Disable hover if no attachments
         setIsHovered(true);
         updateDropdownPosition();
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -137,6 +138,7 @@ const AttachmentPreview = ({
     };
 
     const handleMouseLeave = () => {
+        if (!hasAttachments) return;
         setIsHovered(false);
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         timeoutRef.current = setTimeout(() => {
@@ -204,6 +206,7 @@ const AttachmentPreview = ({
     };
 
     const handleClick = (e) => {
+        if (!hasAttachments) return;
         e.stopPropagation();
         setShowDropdown(false);
         onOpenModal();
@@ -215,7 +218,7 @@ const AttachmentPreview = ({
         md: 'px-2.5 py-1 text-sm gap-1.5'
     };
 
-    const iconSize = size === 'sm' ? 12 : 14;
+    const iconSize = 16;
 
     return (
         <>
@@ -224,17 +227,22 @@ const AttachmentPreview = ({
                 onClick={handleClick}
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
+                disabled={!hasAttachments}
                 className={`
-                    inline-flex items-center rounded-full font-medium transition-all duration-200
+                    inline-flex items-center rounded font-medium transition-all duration-200
                     ${sizeClasses[size]}
                     ${hasAttachments
-                        ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                        : 'bg-gray-50 text-gray-400 hover:bg-gray-100'
+                        ? 'text-blue-600 hover:text-blue-800 cursor-pointer'
+                        : 'text-gray-400 cursor-not-allowed opacity-70'
                     }
-                    ${isHovered ? 'ring-2 ring-blue-200' : ''}
+                    ${isHovered ? '' : ''}
                 `}
             >
-                <Paperclip style={{ width: iconSize, height: iconSize }} />
+                {hasAttachments ? (
+                    <FileCheck style={{ width: iconSize, height: iconSize }} />
+                ) : (
+                    <FileX style={{ width: iconSize, height: iconSize }} />
+                )}
                 <span>{hasAttachments ? attachments.length : '-'}</span>
             </button>
 

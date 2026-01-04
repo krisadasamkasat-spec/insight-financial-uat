@@ -9,10 +9,12 @@ import { useToast } from '../common/ToastProvider';
 
 const EditExpenseModal = ({ isOpen, onClose, onSubmit, onDelete, expense }) => {
     const toast = useToast();
-    // Account Codes State
+    // Account Codes & Projects State
     const [accountCodes, setAccountCodes] = useState([]);
+    const [projects, setProjects] = useState([]);
 
     const [formData, setFormData] = useState({
+        projectCode: '',
         categoryType: 'วางบิล',
         accountCode: '',
         billHeader: '',
@@ -53,7 +55,7 @@ const EditExpenseModal = ({ isOpen, onClose, onSubmit, onDelete, expense }) => {
     const whtDropdownRef = useRef(null);
 
     // WHT Rate options
-    const whtRateOptions = [1, 2, 3, 5];
+    const whtRateOptions = [1, 2, 3, 5, 10];
 
     const bankOptions = [
         { value: '', label: 'เลือกธนาคาร...' },
@@ -90,45 +92,64 @@ const EditExpenseModal = ({ isOpen, onClose, onSubmit, onDelete, expense }) => {
         fetchAccountCodes();
     }, []);
 
-    // Initialize form with expense data
+    // Fetch Account Codes, Projects & Set Initial Data
     useEffect(() => {
-        if (expense && isOpen) {
-            const hasVat = parseFloat(expense.vat_amount) > 0;
-            const hasWht = parseFloat(expense.wht_amount) > 0;
+        const fetchData = async () => {
+            try {
+                const [accRes, projRes] = await Promise.all([
+                    projectAPI.getAccountCodes(),
+                    projectAPI.getAllProjects()
+                ]);
+                setAccountCodes(accRes.data);
+                setProjects(projRes.data);
 
-            let whtRate = 3;
-            if (hasWht && expense.price && parseFloat(expense.price) > 0) {
-                const calculatedRate = (parseFloat(expense.wht_amount) / parseFloat(expense.price)) * 100;
-                whtRate = [1, 2, 3, 5].reduce((prev, curr) =>
-                    Math.abs(curr - calculatedRate) < Math.abs(prev - calculatedRate) ? curr : prev
-                );
+                if (expense) {
+                    const hasVat = (expense.vat_amount || 0) > 0;
+                    const hasWht = (expense.wht_amount || 0) > 0;
+
+                    let whtRate = 3;
+                    if (hasWht && expense.price && parseFloat(expense.price) > 0) {
+                        const calculatedRate = (parseFloat(expense.wht_amount) / (parseFloat(expense.price) - (parseFloat(expense.discount) || 0))) * 100;
+                        whtRate = [1, 2, 3, 5, 10].reduce((prev, curr) =>
+                            Math.abs(curr - calculatedRate) < Math.abs(prev - calculatedRate) ? curr : prev
+                        );
+                    }
+
+                    setFormData({
+                        projectCode: expense.project_code || '',
+                        categoryType: expense.expense_type || 'วางบิล',
+                        accountCode: expense.account_code || '',
+                        billHeader: expense.bill_header || '',
+                        contact: expense.contact || '',
+                        paybackTo: expense.payback_to || '',
+                        bankName: expense.bank_name || '',
+                        bankAccountNumber: expense.bank_account_number || '',
+                        bankAccountName: expense.bank_account_name || '',
+                        phone: expense.phone || '',
+                        email: expense.email || '',
+                        issueDate: expense.issue_date ? expense.issue_date.split('T')[0] : '',
+                        dueDate: expense.due_date ? expense.due_date.split('T')[0] : '',
+                        amount: expense.price?.toString() || '',
+                        discount: expense.discount?.toString() || '',
+                        hasVat: hasVat,
+                        hasWht: hasWht,
+                        whtRate: whtRate,
+                        note: expense.description || '',
+                        status: ['ไม่อนุมัติ', 'Rejected'].includes(expense.status)
+                            ? 'reject ยกเลิก / รอแก้ไข'
+                            : (expense.internal_status || 'ส่งเบิกแล้ว รอเอกสารตัวจริง')
+                    });
+                    // Initialize attachments from prop
+                    setAttachments(expense.attachments || []);
+                    setDeletedIds(new Set());
+                }
+            } catch (err) {
+                console.error('Failed to fetch data:', err);
             }
+        };
 
-            setFormData({
-                categoryType: expense.expense_type || 'วางบิล',
-                accountCode: expense.account_code || '',
-                billHeader: expense.bill_header || '',
-                contact: expense.contact || '',
-                paybackTo: expense.payback_to || '',
-                bankName: expense.bank_name || '',
-                bankAccountNumber: expense.bank_account_number || '',
-                bankAccountName: expense.bank_account_name || '',
-                phone: expense.phone || '',
-                email: expense.email || '',
-                dueDate: expense.due_date || '',
-                amount: expense.price?.toString() || '',
-                discount: expense.discount?.toString() || '',
-                hasVat: hasVat,
-                hasWht: hasWht,
-                whtRate: whtRate,
-                note: expense.description || '',
-                status: expense.internal_status || 'ส่งเบิกแล้ว รอเอกสารตัวจริง'
-            });
-            // Initialize attachments from prop
-            setAttachments(expense.attachments || []);
-            setDeletedIds(new Set());
-        }
-    }, [expense, isOpen]);
+        if (isOpen) fetchData();
+    }, [isOpen, expense]);
 
     const handleFileChange = (e) => {
         const files = Array.from(e.target.files);
@@ -244,9 +265,17 @@ const EditExpenseModal = ({ isOpen, onClose, onSubmit, onDelete, expense }) => {
 
     const validate = () => {
         const newErrors = {};
+        if (!formData.projectCode) newErrors.projectCode = 'กรุณาเลือกรหัสโปรเจค';
         if (!formData.accountCode) newErrors.accountCode = 'กรุณาเลือกรหัสค่าใช้จ่าย';
         if (!formData.billHeader?.trim()) newErrors.billHeader = 'กรุณากรอกหัวบิล';
+        if (!formData.accountCode) newErrors.accountCode = 'กรุณาเลือกรหัสค่าใช้จ่าย';
+        if (!formData.billHeader?.trim()) newErrors.billHeader = 'กรุณากรอกหัวบิล';
+        if (!formData.phone?.trim()) newErrors.phone = 'กรุณากรอกเบอร์โทร';
+        if (!formData.bankName) newErrors.bankName = 'กรุณาเลือกธนาคาร';
+        if (!formData.bankAccountNumber?.trim()) newErrors.bankAccountNumber = 'กรุณากรอกเลขบัญชี';
+        if (!formData.bankAccountName?.trim()) newErrors.bankAccountName = 'กรุณากรอกชื่อบัญชี';
         if (!formData.amount || parseFloat(formData.amount) <= 0) newErrors.amount = 'กรุณาระบุจำนวนเงิน';
+        if (!formData.dueDate) newErrors.dueDate = 'กรุณาระบุวันครบกำหนด';
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -275,6 +304,8 @@ const EditExpenseModal = ({ isOpen, onClose, onSubmit, onDelete, expense }) => {
                 const reportMonth = reportDate.substring(0, 7);
 
                 const updatedExpense = {
+                    ...expense, // Keep ID and other fields
+                    project_code: formData.projectCode,
                     account_code: formData.accountCode,
                     expense_type: formData.categoryType,
                     description: formData.note,
@@ -291,8 +322,12 @@ const EditExpenseModal = ({ isOpen, onClose, onSubmit, onDelete, expense }) => {
                     vat_amount: amounts.vatAmount,
                     wht_amount: amounts.whtAmount,
                     net_amount: amounts.netPayment,
-                    due_date: formData.dueDate || null,
+                    issue_date: formData.issueDate || null, // Added issueDate
+                    dueDate: formData.dueDate || null,
+                    dueDate: formData.dueDate || null,
                     internal_status: formData.status,
+                    status: 'วางบิล', // Reset main status from 'Rejected' to active
+                    reject_reason: null, // Clear rejection reason
                     report_month: reportMonth
                 };
 
@@ -308,6 +343,7 @@ const EditExpenseModal = ({ isOpen, onClose, onSubmit, onDelete, expense }) => {
 
     const handleClose = () => {
         setFormData({
+            projectCode: '',
             categoryType: 'วางบิล',
             accountCode: '',
             billHeader: '',
@@ -318,6 +354,7 @@ const EditExpenseModal = ({ isOpen, onClose, onSubmit, onDelete, expense }) => {
             bankAccountName: '',
             phone: '',
             email: '',
+            issueDate: '',
             dueDate: '',
             amount: '',
             discount: '',
@@ -346,8 +383,17 @@ const EditExpenseModal = ({ isOpen, onClose, onSubmit, onDelete, expense }) => {
 
     const accountCodeOptions = accountCodes.map(code => ({
         value: code.code,
-        label: `${code.code} - ${code.title.substring(0, 25)}${code.title.length > 25 ? '...' : ''}`
+        label: `${code.code} - ${code.title.length > 20 ? code.title.substring(0, 20) + '...' : code.title}`
     }));
+
+    const projectOptions = projects.map(p => ({
+        value: p.project_code,
+        label: p.project_code
+    }));
+
+    // Find selected project and account details
+    const selectedProject = projects.find(p => p.project_code === formData.projectCode);
+    const selectedAccount = accountCodes.find(a => a.code === formData.accountCode);
 
     const formatNumber = (num) => num.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -367,51 +413,90 @@ const EditExpenseModal = ({ isOpen, onClose, onSubmit, onDelete, expense }) => {
             />
 
             <form onSubmit={handleSubmit}>
-                {/* === ปุ่มเลือกประเภท (Header) === */}
-                <div className="flex gap-2 mb-5">
-                    <button
-                        type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, categoryType: 'วางบิล' }))}
-                        className={`flex items-center justify-center gap-2 py-2.5 px-5 rounded-lg border-2 transition-all text-sm ${formData.categoryType === 'วางบิล' ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm' : 'border-gray-200 hover:border-gray-300 bg-white text-gray-600'}`}
-                    >
-                        <Building2 className="w-4 h-4" />
-                        <span className="font-medium">วางบิล</span>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, categoryType: 'เบิกที่สำรองจ่าย' }))}
-                        className={`flex items-center justify-center gap-2 py-2.5 px-5 rounded-lg border-2 transition-all text-sm ${formData.categoryType === 'เบิกที่สำรองจ่าย' ? 'border-orange-500 bg-orange-50 text-orange-700 shadow-sm' : 'border-gray-200 hover:border-gray-300 bg-white text-gray-600'}`}
-                    >
-                        <User className="w-4 h-4" />
-                        <span className="font-medium">เบิกคืน</span>
-                    </button>
-                </div>
+                <div className="flex gap-4 mb-6 items-stretch">
+                    {/* === Left Box: ประเภท (Type Selector) === */}
+                    <div className="w-[120px] shrink-0 p-4 bg-white border border-gray-100 rounded-2xl flex flex-col">
+                        <label className="block text-sm font-semibold text-gray-700 mb-3">ประเภท</label>
+                        <div className="flex flex-col gap-2 flex-1 justify-center">
+                            <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, categoryType: 'วางบิล' }))}
+                                className={`w-full py-2 px-3 rounded-xl text-xs font-medium transition-all text-left flex items-center gap-2 ${formData.categoryType === 'วางบิล' ? 'bg-blue-50 text-blue-600 ring-1 ring-blue-200' : 'text-gray-600 hover:bg-gray-50'}`}
+                            >
+                                <div className={`w-2 h-2 rounded-full ${formData.categoryType === 'วางบิล' ? 'bg-blue-500' : 'bg-gray-300'}`} />
+                                วางบิล
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, categoryType: 'เบิกที่สำรองจ่าย' }))}
+                                className={`w-full py-2 px-3 rounded-xl text-xs font-medium transition-all text-left flex items-center gap-2 ${formData.categoryType === 'เบิกที่สำรองจ่าย' ? 'bg-orange-50 text-orange-600 ring-1 ring-orange-200' : 'text-gray-600 hover:bg-gray-50'}`}
+                            >
+                                <div className={`w-2 h-2 rounded-full ${formData.categoryType === 'เบิกที่สำรองจ่าย' ? 'bg-orange-500' : 'bg-gray-300'}`} />
+                                เบิกคืน
+                            </button>
+                        </div>
+                    </div>
 
-                {/* === 3-Column Grid Layout === */}
-                <div className="grid grid-cols-3 gap-5">
-
-                    {/* ========== COLUMN 1: ข้อมูลรายการ + ผู้รับเงิน ========== */}
-                    <div className="space-y-4">
-                        {/* === Section 1: ข้อมูลรายการ === */}
-                        <div className={sectionClass}>
-                            <div className={sectionHeaderClass}>
-                                <div className={`${sectionIconClass} bg-blue-100`}>
-                                    <FileText className="w-4 h-4 text-blue-600" />
-                                </div>
-                                <span className="text-sm font-semibold text-gray-700">ข้อมูลรายการ</span>
+                    {/* === Right Box: Item Info === */}
+                    <div className={`${sectionClass} flex-1 mb-0 flex flex-col`}>
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className={`${sectionIconClass} bg-blue-100`}>
+                                <FileText className="w-4 h-4 text-blue-600" />
                             </div>
-                            <div className="space-y-3">
-                                <div>
-                                    <label className={labelClass}>รหัสโปรเจค</label>
-                                    <input type="text" value={expense?.project_code || '-'} readOnly className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500 font-mono" />
-                                </div>
-                                <div>
-                                    <FormDropdown label="รหัสค่าใช้จ่าย *" value={formData.accountCode} options={accountCodeOptions} onChange={(val) => handleFieldChange('accountCode', val)} hasError={!!errors.accountCode} colorTheme="blue" />
-                                    {errors.accountCode && <p className="text-red-500 text-xs mt-1">{errors.accountCode}</p>}
-                                </div>
-                            </div>
+                            <span className="text-sm font-semibold text-gray-700">ข้อมูลรายการ</span>
                         </div>
 
+                        <div className="flex gap-6 flex-1 items-center">
+                            {/* Project Group */}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs font-medium text-gray-600 whitespace-nowrap w-[70px] shrink-0">รหัสโปรเจค <span className="text-red-500">*</span></label>
+                                    <div className="flex-1">
+                                        <FormDropdown
+                                            value={formData.projectCode}
+                                            options={projectOptions}
+                                            onChange={(val) => handleFieldChange('projectCode', val)}
+                                            hasError={!!errors.projectCode}
+                                            colorTheme="blue"
+                                            placeholder="เลือก..."
+                                        />
+                                    </div>
+                                </div>
+                                {errors.projectCode && <p className="text-red-500 text-xs mt-1 ml-[78px]">{errors.projectCode}</p>}
+                                <span className="block text-xs text-gray-400 mt-1 truncate ml-[78px]">
+                                    {selectedProject?.project_name || selectedProject?.title || '-'}
+                                </span>
+                            </div>
+
+                            {/* Account Group */}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs font-medium text-gray-600 whitespace-nowrap w-[85px] shrink-0">รหัสค่าใช้จ่าย <span className="text-red-500">*</span></label>
+                                    <div className="flex-1">
+                                        <FormDropdown
+                                            value={formData.accountCode}
+                                            options={accountCodeOptions}
+                                            onChange={(val) => handleFieldChange('accountCode', val)}
+                                            hasError={!!errors.accountCode}
+                                            colorTheme="blue"
+                                            placeholder="เลือก..."
+                                        />
+                                    </div>
+                                </div>
+                                {errors.accountCode && <p className="text-red-500 text-xs mt-1 ml-[93px]">{errors.accountCode}</p>}
+                                <span className="block text-xs text-gray-400 mt-1 truncate ml-[93px]">
+                                    {selectedAccount?.title || '-'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* === 3-Column Grid Layout (Remaining Info) === */}
+                <div className="grid grid-cols-3 gap-5">
+
+                    {/* ========== COLUMN 1: ข้อมูลผู้รับเงิน ========== */}
+                    <div className="space-y-4">
                         {/* === Section 2: ผู้รับเงิน === */}
                         <div className={sectionClass}>
                             <div className={sectionHeaderClass}>
@@ -422,7 +507,7 @@ const EditExpenseModal = ({ isOpen, onClose, onSubmit, onDelete, expense }) => {
                             </div>
                             <div className="space-y-3">
                                 <div>
-                                    <label className={labelClass}>หัวบิล *</label>
+                                    <label className={labelClass}>หัวบิล <span className="text-red-500">*</span></label>
                                     <input type="text" name="billHeader" value={formData.billHeader} onChange={handleChange} className={inputClass('billHeader')} />
                                     {errors.billHeader && <p className="text-red-500 text-xs mt-1">{errors.billHeader}</p>}
                                 </div>
@@ -438,8 +523,9 @@ const EditExpenseModal = ({ isOpen, onClose, onSubmit, onDelete, expense }) => {
                                 )}
                                 <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
                                     <div>
-                                        <label className={labelClass}>เบอร์โทร</label>
+                                        <label className={labelClass}>เบอร์โทร <span className="text-red-500">*</span></label>
                                         <input type="text" name="phone" value={formData.phone} onChange={handleChange} className={inputClass('phone')} />
+                                        {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
                                     </div>
                                     <div>
                                         <label className={labelClass}>อีเมล</label>
@@ -461,22 +547,27 @@ const EditExpenseModal = ({ isOpen, onClose, onSubmit, onDelete, expense }) => {
                                 <span className="text-sm font-semibold text-gray-700">บัญชีสำหรับโอนเงิน</span>
                             </div>
                             <div className="space-y-3">
-                                <FormDropdown label="ธนาคาร" value={formData.bankName} options={bankOptions} onChange={(val) => handleFieldChange('bankName', val)} colorTheme="gray" />
                                 <div>
-                                    <label className={labelClass}>เลขบัญชี</label>
-                                    <input type="text" name="bankAccountNumber" value={formData.bankAccountNumber} onChange={handleChange} className={inputClass('bankAccountNumber')} />
+                                    <FormDropdown label={<>ธนาคาร <span className="text-red-500">*</span></>} value={formData.bankName} options={bankOptions} onChange={(val) => handleFieldChange('bankName', val)} colorTheme="gray" hasError={!!errors.bankName} />
+                                    {errors.bankName && <p className="text-red-500 text-xs mt-1">{errors.bankName}</p>}
                                 </div>
                                 <div>
-                                    <label className={labelClass}>ชื่อบัญชี</label>
+                                    <label className={labelClass}>เลขบัญชี <span className="text-red-500">*</span></label>
+                                    <input type="text" name="bankAccountNumber" value={formData.bankAccountNumber} onChange={handleChange} className={inputClass('bankAccountNumber')} />
+                                    {errors.bankAccountNumber && <p className="text-red-500 text-xs mt-1">{errors.bankAccountNumber}</p>}
+                                </div>
+                                <div>
+                                    <label className={labelClass}>ชื่อบัญชี <span className="text-red-500">*</span></label>
                                     <input type="text" name="bankAccountName" value={formData.bankAccountName} onChange={handleChange} className={inputClass('bankAccountName')} />
+                                    {errors.bankAccountName && <p className="text-red-500 text-xs mt-1">{errors.bankAccountName}</p>}
                                 </div>
                             </div>
                         </div>
 
                         {/* === จำนวนเงิน และ ส่วนลด === */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className={labelClass}>จำนวนเงิน *</label>
+                        <div className="grid grid-cols-3 gap-3">
+                            <div className="col-span-2">
+                                <label className={labelClass}>จำนวนเงิน <span className="text-red-500">*</span></label>
                                 <input type="number" name="amount" value={formData.amount} onChange={handleChange} className={inputClass('amount')} />
                                 {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount}</p>}
                             </div>
@@ -561,11 +652,7 @@ const EditExpenseModal = ({ isOpen, onClose, onSubmit, onDelete, expense }) => {
                             )}
                         </div>
 
-                        {/* === วันที่ === */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <DatePicker label="วันครบกำหนด" value={formData.dueDate} onChange={(val) => handleFieldChange('dueDate', val)} colorTheme="blue" />
-                            <FormDropdown label="สถานะ" value={formData.status} options={statusOptions} onChange={(val) => handleFieldChange('status', val)} colorTheme="blue" />
-                        </div>
+
                     </div>
 
                     {/* ========== COLUMN 3: เอกสารแนบ + โน้ต ========== */}
@@ -629,6 +716,15 @@ const EditExpenseModal = ({ isOpen, onClose, onSubmit, onDelete, expense }) => {
                         <div>
                             <label className={labelClass}>โน้ต / หมายเหตุ</label>
                             <textarea name="note" value={formData.note} onChange={handleChange} rows="4" className={`${inputClass('note')} resize-none`} />
+                        </div>
+
+                        {/* === วันที่ และ สถานะ === */}
+                        <div className="space-y-3">
+                            <div>
+                                <DatePicker label={<>วันครบกำหนด <span className="text-red-500">*</span></>} value={formData.dueDate} onChange={(val) => handleFieldChange('dueDate', val)} colorTheme="blue" hasError={!!errors.dueDate} />
+                                {errors.dueDate && <p className="text-red-500 text-xs mt-1">{errors.dueDate}</p>}
+                            </div>
+                            <FormDropdown label={<>สถานะ <span className="text-red-500">*</span></>} value={formData.status} options={statusOptions} onChange={(val) => handleFieldChange('status', val)} colorTheme="blue" />
                         </div>
                     </div>
                 </div>

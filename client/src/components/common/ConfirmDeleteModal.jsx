@@ -46,13 +46,9 @@ const ConfirmDeleteModal = ({
                 {/* Warning */}
                 {warningMessage && (
                     <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 text-center">
-                        ⚠️ {warningMessage}
+                        ⚠️ การดำเนินการนี้ไม่สามารถย้อนกลับได้
                     </div>
                 )}
-
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700 text-center">
-                    ⚠️ การดำเนินการนี้ไม่สามารถย้อนกลับได้
-                </div>
 
                 {/* Actions */}
                 <div className="flex justify-center gap-3 pt-2">

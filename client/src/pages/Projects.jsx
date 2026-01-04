@@ -4,6 +4,7 @@ import { Plus, Search, FolderKanban, CheckCircle, Banknote, Eye, ChevronUp, Chev
 
 import MinimalDropdown from '../components/common/MinimalDropdown';
 import ProjectModal from '../components/projects/ProjectModal';
+import ProjectStatusConfirmModal from '../components/projects/ProjectStatusConfirmModal';
 import StatusBadge from '../components/common/StatusBadge';
 import ExportButton from '../components/common/ExportButton';
 
@@ -32,6 +33,13 @@ const Projects = () => {
     const [typeFilter, setTypeFilter] = useState('all');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [projects, setProjects] = useState([]);
+    const [statusConfirmModal, setStatusConfirmModal] = useState({
+        isOpen: false,
+        projectCode: null,
+        projectName: null,
+        currentStatus: null,
+        newStatus: null
+    });
 
 
     // Fetch Projects
@@ -189,8 +197,23 @@ const Projects = () => {
             });
     };
 
-    // Handle project status update
-    const handleUpdateProjectStatus = async (projectCode, newStatus) => {
+    // Open confirmation modal before changing status
+    const handleStatusChangeRequest = (project, newStatus) => {
+        // If status is the same, do nothing
+        if (project.status === newStatus) return;
+
+        setStatusConfirmModal({
+            isOpen: true,
+            projectCode: project.projectCode,
+            projectName: project.projectName,
+            currentStatus: project.status,
+            newStatus: newStatus
+        });
+    };
+
+    // Perform actual update after confirmation
+    const handleConfirmStatusChange = async () => {
+        const { projectCode, newStatus } = statusConfirmModal;
         try {
             await projectAPI.updateProject(projectCode, { status: newStatus });
 
@@ -205,6 +228,8 @@ const Projects = () => {
         } catch (err) {
             console.error("Failed to update status", err);
             toast.error("Failed to update status");
+        } finally {
+            setStatusConfirmModal({ isOpen: false, projectCode: null, projectName: null, currentStatus: null, newStatus: null });
         }
     };
 
@@ -230,7 +255,6 @@ const Projects = () => {
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">โปรเจคทั้งหมด</h1>
-                    <p className="text-gray-500 mt-1">จัดการและติดตามโปรเจคของคุณ</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <ExportButton
@@ -263,6 +287,16 @@ const Projects = () => {
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
                 onSubmit={handleProjectChange}
+            />
+
+            {/* Project Status Confirm Modal */}
+            <ProjectStatusConfirmModal
+                isOpen={statusConfirmModal.isOpen}
+                onClose={() => setStatusConfirmModal({ isOpen: false, projectCode: null, projectName: null, currentStatus: null, newStatus: null })}
+                onConfirm={handleConfirmStatusChange}
+                projectName={statusConfirmModal.projectName}
+                currentStatus={statusConfirmModal.currentStatus}
+                newStatus={statusConfirmModal.newStatus}
             />
 
             <div className="flex flex-col gap-6 mb-8">
@@ -428,7 +462,7 @@ const Projects = () => {
                                             <StatusBadge
                                                 status={project.status}
                                                 options={getProjectStatusOptions()}
-                                                onChange={(newStatus) => handleUpdateProjectStatus(project.projectCode, newStatus)}
+                                                onChange={(newStatus) => handleStatusChangeRequest(project, newStatus)}
                                             />
                                         </td>
                                         <td className="px-4 py-3 text-right">

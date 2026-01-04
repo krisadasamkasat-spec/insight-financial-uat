@@ -7,22 +7,24 @@ import { formatNumber, formatDateCE } from '../../utils/formatters';
 import StatusBadge from '../common/StatusBadge';
 import AttachmentPreview from '../common/AttachmentPreview';
 import ViewAttachmentsModal from '../common/ViewAttachmentsModal';
+import MinimalDropdown from '../common/MinimalDropdown';
+import ConfirmDeleteModal from '../common/ConfirmDeleteModal';
 
 const ExpenseListContent = ({ expenses, onRefresh, isLoading }) => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('ทั้งหมด');
+    const [statusFilter, setStatusFilter] = useState('all');
     const [viewingAttachments, setViewingAttachments] = useState(null);
 
     const statusData = [
         { value: 'ส่งเบิกแล้ว รอเอกสารตัวจริง', label: 'รอเอกสาร', color: 'yellow' },
-        { value: 'บัญชีตรวจ และ ได้รับเอกสารตัวจริง', label: 'บัญชีตรวจ', color: 'blue' },
-        { value: 'VP อนุมัติแล้ว ส่งเบิกได้', label: 'VP อนุมัติ', color: 'purple' },
-        { value: 'ส่งเข้า PEAK', label: 'ส่ง PEAK', color: 'indigo' },
-        { value: 'โอนแล้ว รอส่งหลักฐาน', label: 'รอหลักฐาน', color: 'cyan' },
-        { value: 'ส่งหลักฐานแล้ว เอกสารครบ', label: 'เสร็จสิ้น', color: 'green' },
-        { value: 'reject ยกเลิก / รอแก้ไข', label: 'ยกเลิก', color: 'red' }
+        { value: 'บัญชีตรวจ และ ได้รับเอกสารตัวจริง', label: 'บัญชีตรวจแล้ว', color: 'blue' },
+        { value: 'VP อนุมัติแล้ว ส่งเบิกได้', label: 'VP อนุมัติแล้ว', color: 'purple' },
+        { value: 'ส่งเข้า PEAK', label: 'ส่งเข้า PEAK', color: 'indigo' },
+        { value: 'โอนแล้ว รอส่งหลักฐาน', label: 'รอส่งหลักฐาน', color: 'cyan' },
+        { value: 'ส่งหลักฐานแล้ว เอกสารครบ', label: 'ส่งหลักฐานแล้ว', color: 'green' },
+        { value: 'reject ยกเลิก / รอแก้ไข', label: 'ยกเลิก / รอแก้ไข', color: 'red' }
     ];
 
     const statusOptions = ['ทั้งหมด', ...statusData.map(s => s.value)];
@@ -38,7 +40,7 @@ const ExpenseListContent = ({ expenses, onRefresh, isLoading }) => {
                 (e.bill_header && e.bill_header.toLowerCase().includes(searchLower)) ||
                 (e.project_code && e.project_code.toLowerCase().includes(searchLower));
 
-            const matchStatus = statusFilter === 'ทั้งหมด' || e.internal_status === statusFilter;
+            const matchStatus = statusFilter === 'all' || e.internal_status === statusFilter;
 
             return matchesSearch && matchStatus;
         });
@@ -49,9 +51,22 @@ const ExpenseListContent = ({ expenses, onRefresh, isLoading }) => {
         return filteredExpenses.reduce((sum, e) => sum + (parseFloat(e.net_amount) || 0), 0);
     }, [filteredExpenses]);
 
-    const handleAddSubmit = async (newExpense) => {
+    const handleAddSubmit = async (newExpense, attachments = []) => {
         try {
-            await projectAPI.createExpense(newExpense);
+            // 1. Create expense first
+            const res = await projectAPI.createExpense(newExpense);
+            const expenseId = res.data?.id;
+
+            // 2. Upload attachments if any
+            if (expenseId && attachments && attachments.length > 0) {
+                const uploadPromises = attachments.map(file => {
+                    const formData = new FormData();
+                    formData.append('files', file);
+                    return projectAPI.uploadExpenseAttachment(expenseId, formData);
+                });
+                await Promise.all(uploadPromises);
+            }
+
             onRefresh();
         } catch (err) {
             console.error("Failed to create expense", err);
@@ -77,11 +92,27 @@ const ExpenseListContent = ({ expenses, onRefresh, isLoading }) => {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!confirm('ต้องการลบรายการนี้หรือไม่?')) return;
+    const [deleteModal, setDeleteModal] = useState({
+        isOpen: false,
+        expenseId: null,
+        expenseName: ''
+    });
+
+    const handleDeleteClick = (expense) => {
+        setDeleteModal({
+            isOpen: true,
+            expenseId: expense.id,
+            expenseName: expense.description || expense.bill_header || 'รายการค่าใช้จ่าย'
+        });
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!deleteModal.expenseId) return;
+
         try {
-            await projectAPI.deleteExpense(id);
+            await projectAPI.deleteExpense(deleteModal.expenseId);
             onRefresh();
+            setDeleteModal({ isOpen: false, expenseId: null, expenseName: '' });
         } catch (err) {
             console.error("Failed to delete expense", err);
         }
@@ -106,17 +137,14 @@ const ExpenseListContent = ({ expenses, onRefresh, isLoading }) => {
                         </div>
 
                         {/* Status Filter */}
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-500">สถานะ:</span>
-                            <select
+                        <div className="flex items-center">
+                            <MinimalDropdown
+                                label="สถานะ"
                                 value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
-                            >
-                                {statusOptions.map(s => (
-                                    <option key={s} value={s}>{s}</option>
-                                ))}
-                            </select>
+                                options={statusOptions.filter(o => o !== 'ทั้งหมด')}
+                                onChange={setStatusFilter}
+                                allLabel="ทั้งหมด"
+                            />
                         </div>
 
                         {/* Count */}
@@ -142,7 +170,7 @@ const ExpenseListContent = ({ expenses, onRefresh, isLoading }) => {
                     <table className="w-full">
                         <thead>
                             <tr className="bg-gray-50/80 border-b border-gray-100">
-                                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">รหัสโครงการ</th>
+                                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">รหัสโปรเจค</th>
                                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">ประเภท</th>
                                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">รายละเอียด</th>
                                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">ผู้รับเงิน</th>
@@ -174,7 +202,7 @@ const ExpenseListContent = ({ expenses, onRefresh, isLoading }) => {
                                     >
                                         {/* รหัส (Project Code) */}
                                         <td className="px-4 py-3">
-                                            <span className="text-sm font-medium text-blue-600">
+                                            <span className="text-sm font-medium text-gray-900">
                                                 {expense.project_code || '-'}
                                             </span>
                                         </td>
@@ -218,7 +246,7 @@ const ExpenseListContent = ({ expenses, onRefresh, isLoading }) => {
 
                                         {/* จำนวนเงิน */}
                                         <td className="px-4 py-3 text-right">
-                                            <span className="text-sm font-semibold text-blue-700">
+                                            <span className="text-sm font-semibold text-red-600">
                                                 ฿{formatNumber(expense.net_amount)}
                                             </span>
                                         </td>
@@ -232,12 +260,12 @@ const ExpenseListContent = ({ expenses, onRefresh, isLoading }) => {
                                             />
                                         </td>
 
-                                        {/* สถานะ (internal_status) */}
+                                        {/* สถานะ (internal_status) - Read Only */}
                                         <td className="px-4 py-3">
                                             <StatusBadge
-                                                status={expense.internal_status}
-                                                options={statusData}
-                                                onChange={(s) => handleUpdateExpenseStatus(expense.id, s)}
+                                                status={['ไม่อนุมัติ', 'Rejected', 'จ่ายแล้ว', 'Paid'].includes(expense.status) ? expense.status : expense.internal_status}
+                                                options={[{ value: 'ไม่อนุมัติ', label: 'ไม่อนุมัติ', color: 'red' }, ...statusData]}
+                                                readOnly={true}
                                             />
                                         </td>
 
@@ -252,7 +280,7 @@ const ExpenseListContent = ({ expenses, onRefresh, isLoading }) => {
                                                     <Pencil className="w-4 h-4" />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDelete(expense.id)}
+                                                    onClick={() => handleDeleteClick(expense)}
                                                     className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
                                                     title="ลบ"
                                                 >
@@ -305,6 +333,15 @@ const ExpenseListContent = ({ expenses, onRefresh, isLoading }) => {
                 isOpen={!!viewingAttachments}
                 onClose={() => setViewingAttachments(null)}
                 attachments={viewingAttachments || []}
+            />
+
+            <ConfirmDeleteModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+                onConfirm={handleConfirmDelete}
+                title="ยืนยันการลบรายจ่าย"
+                itemName={deleteModal.expenseName}
+                warningMessage="การดำเนินการนี้ไม่สามารถย้อนกลับได้"
             />
         </>
     );

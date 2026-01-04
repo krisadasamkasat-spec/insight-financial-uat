@@ -12,6 +12,7 @@ import { ChevronDown } from 'lucide-react';
  * @param {Function} props.onChange - Callback with selected value
  * @param {boolean} props.hasError - Show error state
  * @param {string} props.colorTheme - 'blue' | 'green' | 'red' (default: 'blue')
+ * @param {boolean} props.disabled - Disable the dropdown
  */
 const FormDropdown = ({
     label,
@@ -19,7 +20,8 @@ const FormDropdown = ({
     options = [],
     onChange,
     hasError = false,
-    colorTheme = 'blue'
+    colorTheme = 'blue',
+    disabled = false
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
@@ -97,18 +99,21 @@ const FormDropdown = ({
                 <button
                     ref={buttonRef}
                     type="button"
-                    onClick={() => setIsOpen(!isOpen)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-lg border transition-all text-left ${hasError
-                        ? 'border-red-300 bg-red-50'
-                        : isOpen
-                            ? 'border-gray-400 bg-gray-50'
-                            : 'border-gray-200 hover:border-gray-300'
+                    onClick={() => !disabled && setIsOpen(!isOpen)}
+                    disabled={disabled}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-lg border transition-all text-left ${disabled
+                        ? 'border-gray-200 bg-gray-100 cursor-not-allowed opacity-70'
+                        : hasError
+                            ? 'border-red-300 bg-red-50'
+                            : isOpen
+                                ? 'border-gray-400 bg-gray-50'
+                                : 'border-gray-200 hover:border-gray-300'
                         }`}
                 >
                     <span className={value ? 'text-gray-900' : 'text-gray-400'}>
                         {displayLabel}
                     </span>
-                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                    {!disabled && <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />}
                 </button>
 
                 {isOpen && createPortal(
@@ -116,10 +121,20 @@ const FormDropdown = ({
                         id={dropdownId}
                         className="fixed bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-[9999] max-h-60 overflow-y-auto"
                         style={{
-                            top: position.top - window.scrollY, // Use fixed positioning relative to viewport
-                            left: position.left, // Left is usually fine if within viewport
+                            // Smart positioning: flip upward if dropdown would extend beyond viewport
+                            top: (() => {
+                                const dropdownHeight = Math.min(normalizedOptions.length * 36 + 8, 240); // estimated height
+                                const buttonTop = position.top - window.scrollY - 44; // subtract button height to get top of button
+                                const spaceBelow = window.innerHeight - (position.top - window.scrollY);
+
+                                if (spaceBelow < dropdownHeight) {
+                                    // Flip upward - position above the button
+                                    return buttonTop - dropdownHeight;
+                                }
+                                return position.top - window.scrollY;
+                            })(),
+                            left: position.left,
                             width: position.width,
-                            // Basic viewport check could be added here but keeping simple for now
                         }}
                     >
                         {normalizedOptions.map((option, index) => (

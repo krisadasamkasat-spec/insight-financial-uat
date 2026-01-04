@@ -72,7 +72,7 @@ router.put('/:id/status', async (req, res) => {
         res.json(updatedExpense);
     } catch (err) {
         console.error(err.message);
-        res.status(500).json({ error: 'Failed to update expense status' });
+        res.status(500).json({ error: 'Failed to update expense status', details: err.message });
     }
 });
 

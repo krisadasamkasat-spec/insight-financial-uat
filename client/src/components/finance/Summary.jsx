@@ -25,37 +25,53 @@ const Summary = ({ totalSelectedAmount, selectedCount, onApprove, incomes = [], 
                     <span className="text-sm text-gray-500">ยอดคงเหลือในบัญชี</span>
                     <span className="text-xs text-gray-400">{new Date().toLocaleDateString('en-GB').replace(/\//g, '-')}</span>
                 </div>
-                <div className="text-2xl font-bold text-gray-900 text-right">
-                    ฿ {formatNumber(accountBalance)}
+                <div className="flex justify-between items-center text-2xl font-bold text-gray-900">
+                    <div className="flex items-center">
+                        <span className="w-8 flex-shrink-0 inline-block text-center"></span>
+                        <span>฿</span>
+                    </div>
+                    <span>{formatNumber(accountBalance)}</span>
                 </div>
             </div>
 
             {/* ยอดเบิกจ่ายที่เลือก - สีแดง */}
-            <div className="mb-5 pb-4 border-b border-gray-100">
+            <div className="mb-3 pb-2 border-b border-gray-100">
                 <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-gray-500">ยอดเบิกจ่ายที่เลือก</span>
                     <span className="text-xs text-gray-400">{selectedCount} รายการ</span>
                 </div>
-                <div className="text-2xl font-bold text-red-500 text-right">
-                    -฿ {formatNumber(totalSelectedAmount)}
+                <div className="flex justify-between items-center text-2xl font-bold text-red-500">
+                    <div className="flex items-center">
+                        <span className="w-8 flex-shrink-0 inline-block text-center">-</span>
+                        <span>฿</span>
+                    </div>
+                    <span>{formatNumber(totalSelectedAmount)}</span>
                 </div>
             </div>
 
             {/* รายรับตามคาดการณ์ - สีเขียว (แสดงเมื่อเลือกวันในอนาคตที่ไม่ใช่วันปัจจุบัน) */}
             {hasFutureDateSelected && (
-                <div className="mb-5 pb-4 border-b border-gray-100">
+                <div className="mb-3 pb-2 border-b border-gray-100">
                     <div className="text-sm text-gray-500 mb-2">รายรับตามคาดการณ์</div>
-                    <div className="text-2xl font-bold text-emerald-500 text-right">
-                        +฿ {formatNumber(projectedIncome)}
+                    <div className="flex justify-between items-center text-2xl font-bold text-emerald-500">
+                        <div className="flex items-center">
+                            <span className="w-8 flex-shrink-0 inline-block text-center">+</span>
+                            <span>฿</span>
+                        </div>
+                        <span>{formatNumber(projectedIncome)}</span>
                     </div>
                 </div>
             )}
 
             {/* ยอดคงเหลือหลังอนุมัติ - สีฟ้า */}
-            <div className="mb-5 pb-4 border-b border-gray-100">
+            <div className="mb-3 pb-2 border-b border-gray-100">
                 <div className="text-sm text-gray-500 mb-2">ยอดคงเหลือหลังอนุมัติ</div>
-                <div className="text-2xl font-bold text-blue-500 text-right">
-                    ฿ {formatNumber(remainingAfterApproval)}
+                <div className="flex justify-between items-center text-2xl font-bold text-blue-500">
+                    <div className="flex items-center">
+                        <span className="w-8 flex-shrink-0 inline-block text-center"></span>
+                        <span>฿</span>
+                    </div>
+                    <span>{formatNumber(remainingAfterApproval)}</span>
                 </div>
             </div>
 
