@@ -1,7 +1,7 @@
 -- =====================================================
 -- Insight Financial - Full Database Schema
--- Version: 1.0.0
--- Generated: 2025-12-28
+-- Version: 1.1.0
+-- Generated: 2026-01-05
 -- =====================================================
 
 -- =====================================================
@@ -24,19 +24,16 @@ CREATE TABLE IF NOT EXISTS project_types (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Financial Statuses Table (for Income & Expense)
-CREATE TABLE IF NOT EXISTS financial_statuses (
-    id SERIAL PRIMARY KEY,
-    category VARCHAR(50) NOT NULL,  -- 'income' or 'expense'
-    value VARCHAR(50) NOT NULL,
-    label VARCHAR(255) NOT NULL,
+-- Expense Codes Table (also known as account_codes)
+CREATE TABLE IF NOT EXISTS expense_codes (
+    code VARCHAR(50) PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
     description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(category, value)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Expense Codes Table
-CREATE TABLE IF NOT EXISTS expense_codes (
+-- Alias view for account_codes (for backward compatibility)
+CREATE TABLE IF NOT EXISTS account_codes (
     code VARCHAR(50) PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     description TEXT,
@@ -165,6 +162,9 @@ CREATE TABLE IF NOT EXISTS expenses (
     description TEXT,
     bank_name VARCHAR(100),
     bank_account_number VARCHAR(50),
+    bank_account_name VARCHAR(255),
+    phone VARCHAR(50),
+    email VARCHAR(255),
     price NUMERIC(15, 2),
     discount NUMERIC(15, 2) DEFAULT 0,
     vat_amount NUMERIC(15, 2) DEFAULT 0,
@@ -174,17 +174,27 @@ CREATE TABLE IF NOT EXISTS expenses (
     internal_status VARCHAR(100),
     peak_status VARCHAR(100),
     report_month VARCHAR(50),
-    status VARCHAR(50) DEFAULT 'วางบิล',
     issue_date DATE,
-    payment_date DATE,
     account_id INTEGER REFERENCES financial_accounts(id),
     file_path VARCHAR(500),
     created_by INTEGER REFERENCES users(id),
     approved_by INTEGER REFERENCES users(id),
     approved_at TIMESTAMP,
     reject_reason TEXT,
+    rejected_by INTEGER REFERENCES users(id),
+    rejected_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Expense Attachments Table
+CREATE TABLE IF NOT EXISTS expense_attachments (
+    id SERIAL PRIMARY KEY,
+    expense_id INTEGER REFERENCES expenses(id) ON DELETE CASCADE,
+    file_name VARCHAR(255) NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    source VARCHAR(50) DEFAULT 'upload',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- =====================================================
@@ -212,16 +222,7 @@ INSERT INTO project_types (value, label) VALUES
 ('Other', 'Other')
 ON CONFLICT (value) DO NOTHING;
 
--- Seed Financial Statuses
-INSERT INTO financial_statuses (category, value, label, description) VALUES
--- Income Statuses
-('income', 'pending', 'รอรับ', 'Waiting for payment'),
-('income', 'Received', 'ได้รับแล้ว', 'Payment received'),
--- Expense Statuses
-('expense', 'วางบิล', 'วางบิล', 'Invoice placed'),
-('expense', 'สำรองจ่าย', 'สำรองจ่าย', 'Advance payment'),
-('expense', 'จ่ายแล้ว', 'จ่ายแล้ว', 'Paid')
-ON CONFLICT (category, value) DO NOTHING;
+
 
 -- Seed Expense Codes (Actual Data - รหัสค่าใช้จ่าย)
 INSERT INTO expense_codes (code, title, description) VALUES

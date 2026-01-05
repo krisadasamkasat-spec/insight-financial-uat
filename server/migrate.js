@@ -40,7 +40,9 @@ async function runMigration() {
                 `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id)`,
                 `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS approved_by INTEGER REFERENCES users(id)`,
                 `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP`,
-                `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS reject_reason TEXT`
+                `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS reject_reason TEXT`,
+                `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS rejected_by INTEGER REFERENCES users(id)`,
+                `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMP`
             ];
 
             for (const q of alterExpenseQueries) {

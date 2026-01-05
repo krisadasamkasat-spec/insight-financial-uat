@@ -209,7 +209,7 @@ const ExpenseListContent = ({ expenses, onRefresh, isLoading }) => {
 
                                         {/* ประเภท */}
                                         <td className="px-4 py-3">
-                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${expense.expense_type === 'เบิกที่สำรองจ่าย' ? 'bg-orange-50 text-orange-600 border border-orange-200' : 'bg-blue-50 text-blue-600 border border-blue-200'}`}>
+                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${expense.expense_type === 'สำรองจ่าย' ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-green-50 text-green-600 border border-green-200'}`}>
                                                 {expense.expense_type || 'วางบิล'}
                                             </span>
                                         </td>

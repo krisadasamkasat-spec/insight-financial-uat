@@ -166,7 +166,7 @@ const PaymentCycleExpenseCard = ({
                             {/* Row 3: Type Badge + Payback To/Store */}
                             {/* Badge Row: font-size 12px, color #202224, normal */}
                             <div className="flex items-center gap-[8px]">
-                                {category_type === 'เบิกที่สำรองจ่าย' ? (
+                                {category_type === 'สำรองจ่าย' ? (
                                     <>
                                         <span className="px-3 py-0.5 rounded-full text-[12px] font-medium bg-[#4285F4] text-white">
                                             สำรองจ่าย

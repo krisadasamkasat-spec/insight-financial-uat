@@ -270,10 +270,10 @@ const AddExpenseModal = ({ isOpen, onClose, onSubmit, projectCode }) => {
                             </button>
                             <button
                                 type="button"
-                                onClick={() => setFormData(prev => ({ ...prev, categoryType: 'เบิกที่สำรองจ่าย' }))}
-                                className={`w-full py-2 px-3 rounded-xl text-xs font-medium transition-all text-left flex items-center gap-2 ${formData.categoryType === 'เบิกที่สำรองจ่าย' ? 'bg-orange-50 text-orange-600 ring-1 ring-orange-200' : 'text-gray-600 hover:bg-gray-50'}`}
+                                onClick={() => setFormData(prev => ({ ...prev, categoryType: 'สำรองจ่าย' }))}
+                                className={`w-full py-2 px-3 rounded-xl text-xs font-medium transition-all text-left flex items-center gap-2 ${formData.categoryType === 'สำรองจ่าย' ? 'bg-orange-50 text-orange-600 ring-1 ring-orange-200' : 'text-gray-600 hover:bg-gray-50'}`}
                             >
-                                <div className={`w-2 h-2 rounded-full ${formData.categoryType === 'เบิกที่สำรองจ่าย' ? 'bg-orange-500' : 'bg-gray-300'}`} />
+                                <div className={`w-2 h-2 rounded-full ${formData.categoryType === 'สำรองจ่าย' ? 'bg-orange-500' : 'bg-gray-300'}`} />
                                 เบิกคืน
                             </button>
                         </div>
@@ -358,7 +358,7 @@ const AddExpenseModal = ({ isOpen, onClose, onSubmit, projectCode }) => {
                                     <label className={labelClass}>ผู้ติดต่อ <span className="text-red-500">*</span></label>
                                     <input type="text" name="contact" value={formData.contact} onChange={handleChange} className={inputClass('contact')} />
                                 </div>
-                                {formData.categoryType === 'เบิกที่สำรองจ่าย' && (
+                                {formData.categoryType === 'สำรองจ่าย' && (
                                     <div>
                                         <label className={labelClass}>จ่ายคืน <span className="text-red-500">*</span></label>
                                         <input type="text" name="paybackTo" value={formData.paybackTo} onChange={handleChange} className={inputClass('paybackTo')} />

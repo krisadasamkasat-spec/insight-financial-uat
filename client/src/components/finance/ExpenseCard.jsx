@@ -149,7 +149,7 @@ const ExpenseCard = ({ data, project, isSelected, onToggle, onPaymentCycleChange
                         <div className="flex flex-col gap-1 mt-1">
                             {/* Primary Payee */}
                             <div className="flex items-center gap-2 text-xs text-gray-600">
-                                {category_type === 'เบิกที่สำรองจ่าย' ? (
+                                {category_type === 'สำรองจ่าย' ? (
                                     <>
                                         <span className="font-semibold text-gray-500 w-20">Payback To:</span>
                                         <span className="font-medium text-gray-800">{payback_name || '-'}</span>
@@ -164,7 +164,7 @@ const ExpenseCard = ({ data, project, isSelected, onToggle, onPaymentCycleChange
 
                             {/* Secondary Info */}
                             <div className="flex items-center gap-2 text-xs text-gray-500">
-                                {category_type === 'เบิกที่สำรองจ่าย' ? (
+                                {category_type === 'สำรองจ่าย' ? (
                                     <>
                                         <span className="w-20">Store/Bill:</span>
                                         <span>{recipient || '-'}</span>

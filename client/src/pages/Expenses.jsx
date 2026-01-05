@@ -95,7 +95,7 @@ const Expenses = () => {
                         title: e.title || e.description,
                         description: e.description,
                         recipient: e.recipient,
-                        status: e.status,
+                        internal_status: e.internal_status, // For reject detection
                         paymentDate: e.payment_date || e.due_date, // Try due_date if no payment_date
                         issueDate: e.issue_date,
                         netAmount: parseFloat(e.net_amount) || 0,
@@ -165,15 +165,22 @@ const Expenses = () => {
     };
 
     // Filter expenses based on active tab
+    // internal_status mapping:
+    // รออนุมัติ: 'ส่งเบิกแล้ว รอเอกสารตัวจริง', 'บัญชีตรวจ และ ได้รับเอกสารตัวจริง'
+    // อนุมัติแล้ว: 'VP อนุมัติแล้ว ส่งเบิกได้', 'โอนแล้ว รอส่งหลักฐาน', 'ส่งหลักฐานแล้ว เอกสารครบ', 'ส่งเข้า PEAK'
+    // ไม่อนุมัติ: 'reject ยกเลิก / รอแก้ไข'
+    const APPROVED_STATUSES = ['VP อนุมัติแล้ว ส่งเบิกได้', 'โอนแล้ว รอส่งหลักฐาน', 'ส่งหลักฐานแล้ว เอกสารครบ', 'ส่งเข้า PEAK'];
+    const REJECTED_STATUS = 'reject ยกเลิก / รอแก้ไข';
+
     const filteredExpenses = useMemo(() => {
         return expenses.filter(e => {
-            const isPaid = e.status === 'จ่ายแล้ว' || e.status === 'Paid';
-            const isRejected = e.status === 'ไม่อนุมัติ' || e.status === 'Rejected';
+            const isApproved = APPROVED_STATUSES.includes(e.internal_status);
+            const isRejected = e.internal_status === REJECTED_STATUS;
 
-            if (activeTab === 'paid') return isPaid;
+            if (activeTab === 'paid') return isApproved;
             if (activeTab === 'rejected') return isRejected;
-            // pending tab: anything NOT paid and NOT rejected
-            return !isPaid && !isRejected;
+            // pending tab: anything NOT approved and NOT rejected
+            return !isApproved && !isRejected;
         });
     }, [expenses, activeTab]);
 
@@ -248,7 +255,7 @@ const Expenses = () => {
     // Handle payment cycle change for individual expense
     const handlePaymentCycleChange = async (expenseId, newDateKey) => {
         try {
-            await projectAPI.updateExpenseStatus(expenseId, { payment_date: newDateKey });
+            await projectAPI.updateExpenseStatus(expenseId, { approved_at: newDateKey });
             // Refresh expenses
             const res = await projectAPI.getAllExpenses();
             const mapped = res.data.map(e => {
@@ -264,7 +271,7 @@ const Expenses = () => {
                     title: e.title || e.description,
                     description: e.description,
                     recipient: e.recipient,
-                    status: e.status,
+                    internal_status: e.internal_status,
                     paymentDate: e.payment_date || e.due_date,
                     issueDate: e.issue_date,
                     netAmount: parseFloat(e.net_amount) || 0,
@@ -343,26 +350,42 @@ const Expenses = () => {
             // Parallel requests
             await Promise.all(
                 Array.from(selectedExpenses).map(id =>
-                    projectAPI.updateExpenseStatus(id, { status: 'จ่ายแล้ว' }) // Or 'อนุมัติจ่าย' based on workflow
+                    projectAPI.updateExpenseStatus(id, { internal_status: 'VP อนุมัติแล้ว ส่งเบิกได้' })
                 )
             );
 
             // Refresh data
             const res = await projectAPI.getAllExpenses();
-            const mapped = res.data.map(e => ({
-                id: e.id,
-                projectCode: e.project_code,
-                title: e.title || e.description,
-                description: e.description,
-                recipient: e.recipient,
-                status: e.status,
-                paymentDate: e.payment_date,
-                netAmount: parseFloat(e.net_amount) || 0,
-                vatAmount: parseFloat(e.vat_amount) || 0,
-                whtAmount: parseFloat(e.wht_amount) || 0,
-                priceAmount: parseFloat(e.price) || 0,
-                attachments: e.attachments || []
-            }));
+            const mapped = res.data.map(e => {
+                const priceAmt = parseFloat(e.price) || 0;
+                const whtAmt = parseFloat(e.wht_amount) || 0;
+                const vatAmt = parseFloat(e.vat_amount) || 0;
+                return {
+                    id: e.id,
+                    projectCode: e.project_code,
+                    expenseCode: e.account_code,
+                    account_title: e.account_title,
+                    expenseCategory: e.expense_category,
+                    title: e.title || e.description,
+                    description: e.description,
+                    recipient: e.recipient,
+                    internal_status: e.internal_status,
+                    paymentDate: e.payment_date || e.due_date,
+                    issueDate: e.issue_date,
+                    netAmount: parseFloat(e.net_amount) || 0,
+                    priceAmount: priceAmt,
+                    vatAmount: vatAmt,
+                    whtAmount: whtAmt,
+                    attachments: e.attachments || [],
+                    createdAt: e.created_at,
+                    category_type: e.expense_type,
+                    expense_type: e.expense_type,
+                    contact: e.contact,
+                    bill_header: e.bill_header,
+                    payback_to: e.payback_to,
+                    reject_reason: e.reject_reason
+                };
+            });
             setExpenses(mapped); // Quick refresh locally
 
             // Refresh balance
@@ -388,8 +411,9 @@ const Expenses = () => {
         setIsRejecting(true);
         try {
             await projectAPI.updateExpenseStatus(expenseId, {
-                status: 'ไม่อนุมัติ',
-                reject_reason: reason
+                internal_status: 'reject ยกเลิก / รอแก้ไข',
+                reject_reason: reason,
+                rejected_at: new Date().toISOString()
             });
 
             // Refresh expenses
@@ -405,7 +429,7 @@ const Expenses = () => {
                     title: e.title || e.description,
                     description: e.description,
                     recipient: e.recipient,
-                    status: e.status,
+                    internal_status: e.internal_status,
                     paymentDate: e.payment_date || e.due_date,
                     issueDate: e.issue_date,
                     netAmount: parseFloat(e.net_amount) || 0,
@@ -592,7 +616,7 @@ const Expenses = () => {
                                 : 'text-gray-500 hover:text-gray-700'
                                 }`}
                         >
-                            รออนุมัติ ({expenses.filter(e => e.status !== 'จ่ายแล้ว' && e.status !== 'Paid' && e.status !== 'ไม่อนุมัติ' && e.status !== 'Rejected').length})
+                            รออนุมัติ ({expenses.filter(e => !APPROVED_STATUSES.includes(e.internal_status) && e.internal_status !== REJECTED_STATUS).length})
                         </button>
                         <button
                             onClick={() => setActiveTab('paid')}
@@ -601,7 +625,7 @@ const Expenses = () => {
                                 : 'text-gray-500 hover:text-gray-700'
                                 }`}
                         >
-                            อนุมัติแล้ว ({expenses.filter(e => e.status === 'จ่ายแล้ว' || e.status === 'Paid').length})
+                            อนุมัติแล้ว ({expenses.filter(e => APPROVED_STATUSES.includes(e.internal_status)).length})
                         </button>
                         <button
                             onClick={() => setActiveTab('rejected')}
@@ -610,7 +634,7 @@ const Expenses = () => {
                                 : 'text-gray-500 hover:text-gray-700'
                                 }`}
                         >
-                            ไม่อนุมัติ ({expenses.filter(e => e.status === 'ไม่อนุมัติ' || e.status === 'Rejected').length})
+                            ไม่อนุมัติ ({expenses.filter(e => e.internal_status === REJECTED_STATUS).length})
                         </button>
                     </div>
 
