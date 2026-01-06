@@ -24,15 +24,7 @@ CREATE TABLE IF NOT EXISTS project_types (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Expense Codes Table (also known as account_codes)
-CREATE TABLE IF NOT EXISTS expense_codes (
-    code VARCHAR(50) PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Alias view for account_codes (for backward compatibility)
+-- Account Codes Table (รหัสค่าใช้จ่าย)
 CREATE TABLE IF NOT EXISTS account_codes (
     code VARCHAR(50) PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
@@ -81,6 +73,27 @@ CREATE TABLE IF NOT EXISTS team_members (
     is_company BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Member Documents Table
+CREATE TABLE IF NOT EXISTS member_documents (
+    id SERIAL PRIMARY KEY,
+    member_id INTEGER REFERENCES team_members(id) ON DELETE CASCADE,
+    doc_type VARCHAR(100),
+    file_name VARCHAR(255) NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Product Categories Table
+CREATE TABLE IF NOT EXISTS product_categories (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(50) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- =====================================================
@@ -153,7 +166,7 @@ CREATE TABLE IF NOT EXISTS incomes (
 -- Expenses Table
 CREATE TABLE IF NOT EXISTS expenses (
     id SERIAL PRIMARY KEY,
-    account_code VARCHAR(50) REFERENCES expense_codes(code),
+    account_code VARCHAR(50) REFERENCES account_codes(code),
     project_code VARCHAR(50) REFERENCES projects(project_code),
     expense_type VARCHAR(100),
     contact VARCHAR(255),
@@ -224,8 +237,8 @@ ON CONFLICT (value) DO NOTHING;
 
 
 
--- Seed Expense Codes (Actual Data - รหัสค่าใช้จ่าย)
-INSERT INTO expense_codes (code, title, description) VALUES
+-- Seed Account Codes (รหัสค่าใช้จ่าย)
+INSERT INTO account_codes (code, title, description) VALUES
 -- ต้นทุนการจัดอบรม (510xxx)
 ('510110', 'ต้นทุนเทรนเนอร์ /Cost of Trainer', 'ต้นทุนการจัดอบรม'),
 ('510111', 'ต้นทุน Co-Trainer /Cost of Co-Trainer', 'ต้นทุนการจัดอบรม'),
