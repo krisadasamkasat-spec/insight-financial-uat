@@ -27,13 +27,12 @@ router.post('/members/:memberId/documents',
             }
 
             const { doc_type } = req.body;
-            const relativePath = `/uploads/members/${req.params.memberId}/${req.file.filename}`;
 
-            const doc = await uploadService.createMemberDocument(
+            // Upload to Cloudinary and save to database
+            const doc = await uploadService.uploadMemberDocToCloudinary(
                 req.params.memberId,
-                doc_type || 'other',
-                req.file.originalname,
-                relativePath
+                req.file,
+                doc_type || 'other'
             );
 
             res.status(201).json(doc);
@@ -79,13 +78,10 @@ router.post('/expenses/:expenseId/attachments',
                 return res.status(400).json({ error: 'No file uploaded' });
             }
 
-            const relativePath = `/uploads/expenses/${req.params.expenseId}/${req.file.filename}`;
-
-            const attachment = await uploadService.createExpenseAttachment(
+            // Upload to Cloudinary and save to database
+            const attachment = await uploadService.uploadExpenseAttachmentToCloudinary(
                 req.params.expenseId,
-                req.file.originalname,
-                relativePath,
-                'upload'
+                req.file
             );
 
             res.status(201).json(attachment);
