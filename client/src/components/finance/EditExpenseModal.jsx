@@ -3,7 +3,7 @@ import Modal from '../common/Modal';
 import FormDropdown from '../common/FormDropdown';
 import DatePicker from '../common/DatePicker';
 import ConfirmDeleteModal from '../common/ConfirmDeleteModal';
-import { projectAPI } from '../../services/api';
+import { projectAPI, API_BASE } from '../../services/api';
 import { ChevronDown, Save, Trash2, Calculator, FileText, CreditCard, Building2, User, Plus } from 'lucide-react';
 import { useToast } from '../common/ToastProvider';
 
@@ -681,7 +681,7 @@ const EditExpenseModal = ({ isOpen, onClose, onSubmit, onDelete, expense }) => {
                                         const isImage = /\.(jpg|jpeg|png|gif)$/i.test(fileName);
                                         const iconBg = isPdf ? 'bg-red-100' : isImage ? 'bg-blue-100' : 'bg-gray-100';
                                         const iconColor = isPdf ? 'text-red-500' : isImage ? 'text-blue-500' : 'text-gray-500';
-                                        const fileUrl = file.isNew ? file.file_path : `http://localhost:3000${filePath.startsWith('/') ? '' : '/'}${filePath}`;
+                                        const fileUrl = file.isNew ? file.file_path : `${API_BASE}${filePath.startsWith('/') ? '' : '/'}${filePath}`;
 
                                         return (
                                             <div key={idx} className="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg group">

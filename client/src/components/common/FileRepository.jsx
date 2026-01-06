@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, FileText, Image, Eye } from 'lucide-react';
+import { API_BASE } from '../../services/api';
 
 /**
  * FileRepository Modal Component
@@ -14,7 +15,7 @@ const FileRepository = ({ isOpen, onClose, documents = [] }) => {
         if (file.file_path) {
             // If file_path is relative, prepend the API base
             if (file.file_path.startsWith('http')) return file.file_path;
-            return `http://localhost:3000${file.file_path.startsWith('/') ? '' : '/'}${file.file_path}`;
+            return `${API_BASE}${file.file_path.startsWith('/') ? '' : '/'}${file.file_path}`;
         }
         return null;
     };

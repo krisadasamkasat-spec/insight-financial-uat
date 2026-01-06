@@ -2,8 +2,12 @@ import axios from 'axios';
 
 // API_BASE = base server URL (for static files like /uploads)
 // API_BASE_URL = API endpoint base (includes /api prefix)
-export const API_BASE = 'http://localhost:3000';
-const API_BASE_URL = 'http://localhost:3000/api';
+// Use environment variable for flexibility, fallback to production Railway URL
+const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+export const API_BASE = isLocalDev
+    ? 'http://localhost:3000'
+    : 'https://insight-financial-production.up.railway.app';
+const API_BASE_URL = `${API_BASE}/api`;
 
 const api = axios.create({
     baseURL: API_BASE_URL,
