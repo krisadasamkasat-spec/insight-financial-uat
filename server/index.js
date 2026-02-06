@@ -13,6 +13,7 @@ const corsOptions = {
   origin: [
     'http://localhost:5173',
     'http://localhost:3000',
+    'https://insight-financial-uat.vercel.app',
     'https://insight-financial.vercel.app',
     'https://insight-financial-c1ysxj4m5-pamus-projects-82976268.vercel.app'
   ],
