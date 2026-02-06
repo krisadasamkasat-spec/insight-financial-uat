@@ -2,55 +2,80 @@ const db = require('../db');
 
 // GET all incomes
 const getAllIncomes = async () => {
-    const result = await db.query('SELECT * FROM incomes ORDER BY date DESC, id DESC');
+    const result = await db.query(`
+        SELECT i.*, to_char(i.due_date, 'YYYY-MM-DD') as due_date, fa.financial_account_name as account_name,
+               COALESCE(
+                   (SELECT json_agg(json_build_object(
+                       'id', ia.id,
+                       'file_name', ia.file_name,
+                       'file_path', ia.file_path,
+                       'source', ia.source
+                   ))
+                   FROM income_attachments ia
+                   WHERE ia.income_id = i.id
+                   ), '[]'
+               ) as attachments
+        FROM income_lists i
+        LEFT JOIN financial_accounts fa ON i.financial_account_id = fa.id
+        ORDER BY i.due_date ASC, i.created_at DESC
+    `);
     return result.rows;
 };
 
 // GET incomes by project
 const getIncomesByProject = async (projectCode) => {
-    const result = await db.query('SELECT * FROM incomes WHERE project_code = $1 ORDER BY date DESC', [projectCode]);
+    const result = await db.query(`
+        SELECT i.*, to_char(i.due_date, 'YYYY-MM-DD') as due_date, fa.financial_account_name as account_name,
+               COALESCE(
+                   (SELECT json_agg(json_build_object(
+                       'id', ia.id,
+                       'file_name', ia.file_name,
+                       'file_path', ia.file_path,
+                       'source', ia.source
+                   ))
+                   FROM income_attachments ia
+                   WHERE ia.income_id = i.id
+                   ), '[]'
+               ) as attachments
+        FROM income_lists i
+        LEFT JOIN financial_accounts fa ON i.financial_account_id = fa.id
+        WHERE i.project_code = $1 
+        ORDER BY i.due_date ASC, i.created_at DESC
+    `, [projectCode]);
     return result.rows;
 };
 
-// CREATE new income
+// CREATE new income & Update Balance (if received)
 const createIncome = async (incomeData) => {
     const {
-        project_code, description, invoice_no, date, amount, status, created_by, account_id
+        project_code, description, amount, financial_account_id, due_date, status = 'pending'
     } = incomeData;
 
     const client = await db.pool.connect();
     try {
         await client.query('BEGIN');
 
-        let targetAccountId = account_id;
-
-        // If no account_id provided, find primary account
+        // 1. Resolve Account ID (Default to 1 if missing/invalid)
+        let targetAccountId = financial_account_id;
         if (!targetAccountId) {
-            const accResult = await client.query('SELECT id FROM financial_accounts WHERE is_primary = TRUE LIMIT 1');
-            if (accResult.rows.length > 0) {
-                targetAccountId = accResult.rows[0].id;
-            }
+            const accResult = await client.query('SELECT id FROM financial_accounts ORDER BY id ASC LIMIT 1');
+            if (accResult.rows.length > 0) targetAccountId = accResult.rows[0].id;
         }
 
+        // 2. Insert Income
         const result = await client.query(
-            `INSERT INTO incomes (
-                project_code, description, invoice_no, date, amount, status, created_by, account_id
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING *`,
-            [
-                project_code, description, invoice_no, date, amount,
-                status || 'pending', created_by || 1, targetAccountId
-            ]
+            `INSERT INTO income_lists (
+                project_code, description, amount, financial_account_id, due_date, status
+            ) VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING *, to_char(due_date, 'YYYY-MM-DD') as due_date`,
+            [project_code, description, amount || 0, targetAccountId, due_date, status]
         );
-
         const newIncome = result.rows[0];
 
-        // LOGIC: If status is 'received' ('รับเงินแล้ว') and we have an account, add balance
-        if ((status === 'รับเงินแล้ว' || status === 'Received') && targetAccountId) {
+        // 3. Update Account Balance ONLY IF RECEIVED
+        if (targetAccountId && amount && status === 'received') {
             await client.query(
-                `UPDATE financial_accounts 
-                 SET balance = balance + $1 
-                 WHERE id = $2`,
+                `UPDATE financial_accounts SET balance = balance + $1 WHERE id = $2`,
                 [amount, targetAccountId]
             );
         }
@@ -66,90 +91,73 @@ const createIncome = async (incomeData) => {
     }
 };
 
-// UPDATE income
+// UPDATE income & Adjust Balance based on status changes
 const updateIncome = async (id, updateData) => {
-    const { description, invoice_no, date, amount, status } = updateData;
+    const { description, amount, financial_account_id, due_date, status } = updateData;
 
     const client = await db.pool.connect();
     try {
         await client.query('BEGIN');
 
-        // 1. Fetch current status to prevent double-addition logic
-        const currentIncomeResult = await client.query('SELECT * FROM incomes WHERE id = $1', [id]);
-
-        if (currentIncomeResult.rows.length === 0) {
+        // 1. Get Old Data
+        const currentResult = await client.query('SELECT * FROM income_lists WHERE id = $1', [id]);
+        if (currentResult.rows.length === 0) {
             await client.query('ROLLBACK');
-            return null; // Not found
+            return null;
+        }
+        const oldIncome = currentResult.rows[0];
+        const oldAmount = parseFloat(oldIncome.amount) || 0;
+        const oldAccId = oldIncome.financial_account_id;
+        const oldStatus = oldIncome.status || 'pending';
+
+        // 2. Prepare Updates
+        const fields = [];
+        const params = [];
+        let pIdx = 1;
+
+        if (description !== undefined) { fields.push(`description = $${pIdx++}`); params.push(description); }
+        if (amount !== undefined) { fields.push(`amount = $${pIdx++}`); params.push(amount); }
+        if (financial_account_id !== undefined) { fields.push(`financial_account_id = $${pIdx++}`); params.push(financial_account_id || null); }
+        if (due_date !== undefined) { fields.push(`due_date = $${pIdx++}`); params.push(due_date || null); }
+        if (status !== undefined) { fields.push(`status = $${pIdx++}`); params.push(status); }
+
+        if (fields.length === 0) {
+            await client.query('ROLLBACK');
+            return oldIncome;
         }
 
-        const currentData = currentIncomeResult.rows[0];
-        const previousStatus = currentData.status;
-        const previousAmount = parseFloat(currentData.amount);
-
-        // 2. Update the income record
-        const result = await client.query(
-            `UPDATE incomes SET 
-                description = $1, invoice_no = $2, date = $3, amount = $4, status = $5, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $6 RETURNING *`,
-            [description, invoice_no, date, amount, status, id]
-        );
-
+        params.push(id);
+        const updateQuery = `UPDATE income_lists SET ${fields.join(', ')} WHERE id = $${pIdx} RETURNING *, to_char(due_date, 'YYYY-MM-DD') as due_date`;
+        const result = await client.query(updateQuery, params);
         const updatedIncome = result.rows[0];
-        const newStatus = status;
-        const newAmount = parseFloat(amount);
-        const wasReceived = previousStatus === 'รับเงินแล้ว' || previousStatus === 'Received';
-        const isReceived = newStatus === 'รับเงินแล้ว' || newStatus === 'Received';
 
-        // 3. Handle balance changes based on status
+        // 3. Adjust Balances Logic
+        const newAmount = parseFloat(updatedIncome.amount) || 0;
+        const newAccId = updatedIncome.financial_account_id;
+        const newStatus = updatedIncome.status || 'pending';
 
-        // Case 1: Was received, now NOT received -> Refund
-        if (wasReceived && !isReceived && currentData.account_id) {
-            await client.query(
-                'UPDATE financial_accounts SET balance = balance - $1 WHERE id = $2',
-                [previousAmount, currentData.account_id]
-            );
-        }
-        // Case 2: Was NOT received, now IS received -> Add balance
-        else if (!wasReceived && isReceived) {
-            let targetAccountId = updatedIncome.account_id;
-
-            console.log('💰 Processing income:', { status: newStatus, previousStatus, targetAccountId, newAmount });
-
-            // If no account_id, find primary account or any account
-            if (!targetAccountId) {
-                let accResult = await client.query('SELECT id FROM financial_accounts WHERE is_primary = TRUE LIMIT 1');
-
-                // Fallback: if no primary, get any account
-                if (accResult.rows.length === 0) {
-                    accResult = await client.query('SELECT id FROM financial_accounts ORDER BY id LIMIT 1');
-                }
-
-                if (accResult.rows.length > 0) {
-                    targetAccountId = accResult.rows[0].id;
-                    // Link income to this account for history
-                    await client.query('UPDATE incomes SET account_id = $1 WHERE id = $2', [targetAccountId, id]);
-                    console.log('💰 Linked income to account:', targetAccountId);
-                }
-            }
-
-            // Add balance if we have an account ID
-            if (targetAccountId && newAmount > 0) {
-                await client.query(
-                    'UPDATE financial_accounts SET balance = balance + $1 WHERE id = $2',
-                    [newAmount, targetAccountId]
-                );
-                console.log('💰 Added balance:', newAmount, 'to account:', targetAccountId);
-            } else {
-                console.log('⚠️ No addition: accountId=', targetAccountId, 'newAmount=', newAmount);
+        // Case 1: Was Received, Now Pending (Revert Balance)
+        if (oldStatus === 'received' && newStatus !== 'received') {
+            if (oldAccId) {
+                await client.query('UPDATE financial_accounts SET balance = balance - $1 WHERE id = $2', [oldAmount, oldAccId]);
             }
         }
-        // Case 3: Was received and still received but amount changed -> Adjust
-        else if (wasReceived && isReceived && previousAmount !== newAmount && currentData.account_id) {
-            const diff = newAmount - previousAmount;
-            await client.query(
-                'UPDATE financial_accounts SET balance = balance + $1 WHERE id = $2',
-                [diff, currentData.account_id]
-            );
+        // Case 2: Was Not Received, Now Received (Add Balance)
+        else if (oldStatus !== 'received' && newStatus === 'received') {
+            if (newAccId) {
+                await client.query('UPDATE financial_accounts SET balance = balance + $1 WHERE id = $2', [newAmount, newAccId]);
+            }
+        }
+        // Case 3: Still Received, but Amount or Account changed (Adjust Difference)
+        else if (oldStatus === 'received' && newStatus === 'received') {
+            // Revert old
+            if (oldAccId) {
+                await client.query('UPDATE financial_accounts SET balance = balance - $1 WHERE id = $2', [oldAmount, oldAccId]);
+            }
+            // Add new
+            if (newAccId) {
+                await client.query('UPDATE financial_accounts SET balance = balance + $1 WHERE id = $2', [newAmount, newAccId]);
+            }
         }
 
         await client.query('COMMIT');
@@ -163,10 +171,53 @@ const updateIncome = async (id, updateData) => {
     }
 };
 
-// DELETE income
+// DELETE income & Revert Balance (if received)
 const deleteIncome = async (id) => {
-    const result = await db.query('DELETE FROM incomes WHERE id = $1 RETURNING *', [id]);
-    return result.rows.length > 0;
+    const client = await db.pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const currentResult = await client.query('SELECT * FROM income_lists WHERE id = $1', [id]);
+        if (currentResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return false;
+        }
+        const oldIncome = currentResult.rows[0];
+
+        // Delete Attachments first (or cascade)
+        await client.query('DELETE FROM income_attachments WHERE income_id = $1', [id]);
+
+        // Delete Record
+        await client.query('DELETE FROM income_lists WHERE id = $1', [id]);
+
+        // Revert Balance ONLY IF IT WAS RECEIVED
+        if (oldIncome.status === 'received' && oldIncome.financial_account_id && oldIncome.amount) {
+            await client.query(
+                `UPDATE financial_accounts SET balance = balance - $1 WHERE id = $2`,
+                [oldIncome.amount, oldIncome.financial_account_id]
+            );
+        }
+
+        await client.query('COMMIT');
+        return true;
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+    } finally {
+        client.release();
+    }
+};
+
+const addAttachment = async (attachmentData) => {
+    const { income_id, file_name, file_path, source } = attachmentData;
+    const result = await db.query(
+        `INSERT INTO income_attachments (income_id, file_name, file_path, source)
+         VALUES ($1, $2, $3, $4)
+         RETURNING *`,
+        [income_id, file_name, file_path, source || 'upload']
+    );
+    return result.rows[0];
 };
 
 module.exports = {
@@ -174,5 +225,10 @@ module.exports = {
     getIncomesByProject,
     createIncome,
     updateIncome,
-    deleteIncome
+    deleteIncome,
+    addAttachment,
+    deleteAttachment: async (id) => {
+        const result = await db.query('DELETE FROM income_attachments WHERE id = $1 RETURNING *', [id]);
+        return result.rows[0];
+    }
 };

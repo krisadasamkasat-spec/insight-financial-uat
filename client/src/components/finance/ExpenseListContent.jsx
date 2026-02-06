@@ -1,33 +1,46 @@
-import React, { useState, useMemo } from 'react';
-import AddExpenseModal from './AddExpenseModal';
-import EditExpenseModal from './EditExpenseModal';
+import React, { useState, useMemo, useEffect } from 'react';
+import ExpenseModal from './ExpenseModal';
 import { projectAPI } from '../../services/api';
-import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, LayoutList, Layers } from 'lucide-react'; // Added Icons
 import { formatNumber, formatDateCE } from '../../utils/formatters';
 import StatusBadge from '../common/StatusBadge';
 import AttachmentPreview from '../common/AttachmentPreview';
-import ViewAttachmentsModal from '../common/ViewAttachmentsModal';
-import MinimalDropdown from '../common/MinimalDropdown';
+import FileRepository from '../common/FileRepository';
+import Dropdown from '../common/Dropdown';
 import ConfirmDeleteModal from '../common/ConfirmDeleteModal';
+import ExpenseRow from './ExpenseRow';
+import StatusGroupedTable from './StatusGroupedTable'; // Added
+import { STATUS_DATA } from '../../constants/expenseStatus';
 
-const ExpenseListContent = ({ expenses, onRefresh, isLoading }) => {
+const ExpenseListContent = ({ expenses, onRefresh, isLoading, projectCode }) => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [viewingAttachments, setViewingAttachments] = useState(null);
+    const [viewMode, setViewMode] = useState('flat'); // 'flat' | 'grouped'
+    const [payRoundFilter, setPayRoundFilter] = useState('all'); // Default 'all'
 
-    const statusData = [
-        { value: 'ส่งเบิกแล้ว รอเอกสารตัวจริง', label: 'รอเอกสาร', color: 'yellow' },
-        { value: 'บัญชีตรวจ และ ได้รับเอกสารตัวจริง', label: 'บัญชีตรวจแล้ว', color: 'blue' },
-        { value: 'VP อนุมัติแล้ว ส่งเบิกได้', label: 'VP อนุมัติแล้ว', color: 'purple' },
-        { value: 'ส่งเข้า PEAK', label: 'ส่งเข้า PEAK', color: 'indigo' },
-        { value: 'โอนแล้ว รอส่งหลักฐาน', label: 'รอส่งหลักฐาน', color: 'cyan' },
-        { value: 'ส่งหลักฐานแล้ว เอกสารครบ', label: 'ส่งหลักฐานแล้ว', color: 'green' },
-        { value: 'reject ยกเลิก / รอแก้ไข', label: 'ยกเลิก / รอแก้ไข', color: 'red' }
-    ];
+    const statusOptions = ['ทั้งหมด', ...STATUS_DATA.map(s => s.value)];
 
-    const statusOptions = ['ทั้งหมด', ...statusData.map(s => s.value)];
+    // Derive Pay Rounds from Expenses
+    const payRoundOptions = useMemo(() => {
+        const rounds = new Set();
+        expenses.forEach(e => {
+            const date = e.payment_date || e.due_date;
+            if (date) rounds.add(date);
+        });
+
+        // Sort DESC
+        const sorted = Array.from(rounds).sort((a, b) => new Date(b) - new Date(a));
+
+        return [
+            { value: 'all', label: 'ทั้งหมด' },
+            ...sorted.map(d => ({ value: d, label: formatDateCE(d) }))
+        ];
+    }, [expenses]);
+
+    // Removed auto-set useEffect
 
     // Filter Logic
     const filteredExpenses = useMemo(() => {
@@ -42,9 +55,15 @@ const ExpenseListContent = ({ expenses, onRefresh, isLoading }) => {
 
             const matchStatus = statusFilter === 'all' || e.internal_status === statusFilter;
 
-            return matchesSearch && matchStatus;
+            let matchPayRound = true;
+            if (viewMode === 'grouped' && payRoundFilter !== 'all') {
+                const d = e.payment_date || e.due_date;
+                matchPayRound = d === payRoundFilter;
+            }
+
+            return matchesSearch && matchStatus && matchPayRound;
         });
-    }, [expenses, searchTerm, statusFilter]);
+    }, [expenses, searchTerm, statusFilter, payRoundFilter, viewMode]);
 
     // Calculate total
     const totalAmount = useMemo(() => {
@@ -119,44 +138,85 @@ const ExpenseListContent = ({ expenses, onRefresh, isLoading }) => {
     };
 
     return (
-        <>
-            {/* Filter Bar */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 w-full md:w-auto">
-                        {/* Search */}
-                        <div className="relative flex-1 md:w-64">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="ค้นหารายจ่าย..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                            />
-                        </div>
+        <div className="space-y-6">
+            {/* Header Controls */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                {/* View Toggle & Pay Round (Left Side) - Hidden in flat view as per request "No Pay Round in list page" */}
+                {viewMode === 'grouped' ? (
+                    <div className="flex items-center gap-3 bg-white p-1 rounded-xl border border-gray-200 shadow-sm h-[46px]">
+                        <Dropdown
+                            inline
+                            label="รอบจ่าย"
+                            value={payRoundFilter}
+                            options={payRoundOptions}
+                            onChange={setPayRoundFilter}
+                            minWidth="140px"
+                        />
+                    </div>
+                ) : <div></div>}
 
-                        {/* Status Filter */}
-                        <div className="flex items-center">
-                            <MinimalDropdown
+                {/* Right Side Controls (Search, Status, View Toggle, Add) */}
+                <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                    {/* Search */}
+                    <div className="relative flex-1 lg:flex-none h-[46px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <input
+                            type="text"
+                            placeholder="ค้นหา..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-9 pr-4 h-full w-full lg:w-64 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                        />
+                    </div>
+
+                    {/* Status Filter (Only show in Flat Mode) */}
+                    {viewMode === 'flat' && (
+                        <div className="flex items-center gap-2 bg-white px-3 border border-gray-200 rounded-lg shadow-sm h-[46px]">
+                            <span className="text-sm font-medium text-gray-700 whitespace-nowrap">สถานะ:</span>
+                            <Dropdown
+                                inline
+                                showAllOption
                                 label="สถานะ"
                                 value={statusFilter}
                                 options={statusOptions.filter(o => o !== 'ทั้งหมด')}
                                 onChange={setStatusFilter}
                                 allLabel="ทั้งหมด"
+                                minWidth="100px"
+                                listMinWidth="200px"
                             />
                         </div>
+                    )}
 
-                        {/* Count */}
-                        <span className="text-sm text-gray-500 whitespace-nowrap">
-                            {filteredExpenses.length} / {expenses.length} รายการ
-                        </span>
+                    {/* View Toggle */}
+                    <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 h-[46px] items-center">
+                        <button
+                            onClick={() => {
+                                setViewMode('flat');
+                                setPayRoundFilter('all'); // Reset filter when switching to flat
+                            }}
+                            className={`p-2 rounded-md transition-all h-full flex items-center justify-center ${viewMode === 'flat' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                            title="รายการแบบตาราง"
+                        >
+                            <LayoutList size={20} />
+                        </button>
+                        <button
+                            onClick={() => setViewMode('grouped')}
+                            className={`p-2 rounded-md transition-all h-full flex items-center justify-center ${viewMode === 'grouped' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                            title="แยกตามสถานะ"
+                        >
+                            <Layers size={20} />
+                        </button>
                     </div>
+
+                    {/* Count */}
+                    <span className="text-sm text-gray-500 whitespace-nowrap hidden xl:inline">
+                        {filteredExpenses.length} รายการ
+                    </span>
 
                     {/* Add Button */}
                     <button
                         onClick={() => setIsAddModalOpen(true)}
-                        className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-sm hover:shadow-md whitespace-nowrap"
+                        className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white px-4 h-[46px] rounded-lg font-medium transition-all shadow-sm hover:shadow-md whitespace-nowrap"
                     >
                         <Plus className="w-4 h-4" />
                         เพิ่มรายจ่าย
@@ -164,164 +224,89 @@ const ExpenseListContent = ({ expenses, onRefresh, isLoading }) => {
                 </div>
             </div>
 
-            {/* Table */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="bg-gray-50/80 border-b border-gray-100">
-                                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">รหัสโปรเจค</th>
-                                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">ประเภท</th>
-                                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">รายละเอียด</th>
-                                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">ผู้รับเงิน</th>
-                                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">กำหนดจ่าย</th>
-                                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">จำนวนเงิน</th>
-                                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">ไฟล์แนบ</th>
-                                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">สถานะ</th>
-                                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {isLoading ? (
-                                <tr>
-                                    <td colSpan={9} className="text-center py-12 text-gray-400">
-                                        กำลังโหลด...
-                                    </td>
+            {/* Content Renders */}
+            {viewMode === 'flat' ? (
+                /* Flat Table */
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="bg-gray-50/80 border-b border-gray-100">
+                                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">รหัสโปรเจค</th>
+                                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">ประเภท</th>
+                                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">รายละเอียด</th>
+                                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">ผู้รับเงิน</th>
+                                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">กำหนดจ่าย</th>
+                                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">จำนวนเงิน</th>
+                                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">ไฟล์แนบ</th>
+                                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">สถานะ</th>
+                                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">จัดการ</th>
                                 </tr>
-                            ) : filteredExpenses.length === 0 ? (
-                                <tr>
-                                    <td colSpan={9} className="text-center py-12 text-gray-400">
-                                        ไม่พบรายการ
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredExpenses.map((expense, idx) => (
-                                    <tr
-                                        key={expense.id}
-                                        className={`hover:bg-blue-50/30 transition-colors ${idx % 2 === 1 ? 'bg-gray-50/30' : ''}`}
-                                    >
-                                        {/* รหัส (Project Code) */}
-                                        <td className="px-4 py-3">
-                                            <span className="text-sm font-medium text-gray-900">
-                                                {expense.project_code || '-'}
-                                            </span>
-                                        </td>
-
-                                        {/* ประเภท */}
-                                        <td className="px-4 py-3">
-                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${expense.expense_type === 'สำรองจ่าย' ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-green-50 text-green-600 border border-green-200'}`}>
-                                                {expense.expense_type || 'วางบิล'}
-                                            </span>
-                                        </td>
-
-                                        {/* รายละเอียด */}
-                                        <td className="px-4 py-3">
-                                            <div className="font-medium text-sm text-gray-900">{expense.account_title || '-'}</div>
-                                            <div className="text-xs text-gray-500">{expense.description || '-'}</div>
-                                        </td>
-
-                                        {/* ผู้รับเงิน */}
-                                        <td className="px-4 py-3">
-                                            {expense.payback_to ? (
-                                                <div>
-                                                    <div className="text-sm text-gray-900 font-medium">{expense.payback_to}</div>
-                                                    {expense.contact && expense.contact !== expense.payback_to && (
-                                                        <div className="text-xs text-gray-500">({expense.contact})</div>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <div>
-                                                    <div className="text-sm text-gray-700">{expense.contact || '-'}</div>
-                                                    {expense.bill_header && expense.bill_header !== expense.contact && (
-                                                        <div className="text-xs text-gray-400">{expense.bill_header}</div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </td>
-
-                                        {/* กำหนดจ่าย (due_date) */}
-                                        <td className="px-4 py-3 text-sm text-gray-500">
-                                            {formatDateCE(expense.due_date)}
-                                        </td>
-
-                                        {/* จำนวนเงิน */}
-                                        <td className="px-4 py-3 text-right">
-                                            <span className="text-sm font-semibold text-red-600">
-                                                ฿{formatNumber(expense.net_amount)}
-                                            </span>
-                                        </td>
-
-                                        {/* ไฟล์แนบ */}
-                                        <td className="px-4 py-3 text-center">
-                                            <AttachmentPreview
-                                                attachments={expense.attachments || []}
-                                                onOpenModal={() => setViewingAttachments(expense.attachments)}
-                                                size="sm"
-                                            />
-                                        </td>
-
-                                        {/* สถานะ (internal_status) - Read Only */}
-                                        <td className="px-4 py-3">
-                                            <StatusBadge
-                                                status={['ไม่อนุมัติ', 'Rejected', 'จ่ายแล้ว', 'Paid'].includes(expense.status) ? expense.status : expense.internal_status}
-                                                options={[{ value: 'ไม่อนุมัติ', label: 'ไม่อนุมัติ', color: 'red' }, ...statusData]}
-                                                readOnly={true}
-                                            />
-                                        </td>
-
-                                        {/* จัดการ */}
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center justify-center gap-1">
-                                                <button
-                                                    onClick={() => setEditingExpense(expense)}
-                                                    className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors"
-                                                    title="แก้ไข"
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteClick(expense)}
-                                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-                                                    title="ลบ"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={9} className="text-center py-12 text-gray-400">
+                                            กำลังโหลด...
                                         </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
+                                ) : filteredExpenses.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={9} className="text-center py-12 text-gray-400">
+                                            ไม่พบรายการ
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredExpenses.map((expense, idx) => (
+                                        <ExpenseRow
+                                            key={expense.id}
+                                            idx={idx}
+                                            expense={expense}
+                                            onEdit={setEditingExpense}
+                                            onDelete={handleDeleteClick}
+                                            onViewAttachments={setViewingAttachments}
+                                        />
+                                    ))
+                                )}
+                            </tbody>
 
-                        {/* Total Footer */}
-                        {!isLoading && filteredExpenses.length > 0 && (
-                            <tfoot>
-                                <tr className="bg-gray-50/80 border-t border-gray-200">
-                                    <td colSpan={5} className="px-4 py-3 text-right">
-                                        <span className="text-sm font-medium text-gray-600">รวมทั้งสิ้น</span>
-                                    </td>
-                                    <td className="px-4 py-3 text-right">
-                                        <span className="text-base font-bold text-orange-600">
-                                            ฿{formatNumber(totalAmount)}
-                                        </span>
-                                    </td>
-                                    <td colSpan={3}></td>
-                                </tr>
-                            </tfoot>
-                        )}
-                    </table>
+                            {/* Total Footer */}
+                            {!isLoading && filteredExpenses.length > 0 && (
+                                <tfoot className="bg-gray-50 border-t border-gray-200">
+                                    <tr>
+                                        <td colSpan={5} className="px-4 py-3 text-right font-bold text-gray-900">รวมทั้งหมด</td>
+                                        <td className="px-4 py-3 text-right font-bold text-red-600">฿{formatNumber(totalAmount)}</td>
+                                        <td colSpan={3}></td>
+                                    </tr>
+                                </tfoot>
+                            )}
+                        </table>
+                    </div>
                 </div>
-            </div>
+
+            ) : (
+                /* Grouped View */
+                <StatusGroupedTable
+                    expenses={filteredExpenses}
+                    onEdit={setEditingExpense}
+                    onDelete={handleDeleteClick}
+                    onViewAttachments={setViewingAttachments}
+                    isLoading={isLoading}
+                />
+            )}
 
             {/* Modals */}
-            <AddExpenseModal
+            <ExpenseModal
+                mode="add"
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
                 onSubmit={handleAddSubmit}
+                projectCode={projectCode}
             />
 
             {editingExpense && (
-                <EditExpenseModal
+                <ExpenseModal
+                    mode="edit"
                     isOpen={!!editingExpense}
                     onClose={() => setEditingExpense(null)}
                     expense={editingExpense}
@@ -329,10 +314,10 @@ const ExpenseListContent = ({ expenses, onRefresh, isLoading }) => {
                 />
             )}
 
-            <ViewAttachmentsModal
+            <FileRepository
                 isOpen={!!viewingAttachments}
                 onClose={() => setViewingAttachments(null)}
-                attachments={viewingAttachments || []}
+                documents={viewingAttachments || []}
             />
 
             <ConfirmDeleteModal
@@ -343,7 +328,7 @@ const ExpenseListContent = ({ expenses, onRefresh, isLoading }) => {
                 itemName={deleteModal.expenseName}
                 warningMessage="การดำเนินการนี้ไม่สามารถย้อนกลับได้"
             />
-        </>
+        </div>
     );
 };
 

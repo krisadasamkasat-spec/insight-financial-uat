@@ -22,9 +22,9 @@ async function runMigration() {
             // Ensure default user exists (with explicit sequence handling)
             try {
                 await db.query(`
-                    INSERT INTO users (id, username, email, full_name, is_active) 
+                    INSERT INTO users (id, username, name, role, is_active) 
                     OVERRIDING SYSTEM VALUE
-                    VALUES (1, 'system', 'system@insight-financial.com', 'System User', TRUE)
+                    VALUES (1, 'system', 'System User', 'system', TRUE)
                     ON CONFLICT (id) DO NOTHING
                 `);
                 console.log('✅ Default user verified.');
@@ -51,6 +51,64 @@ async function runMigration() {
                 } catch (e) {
                     // Ignore if column already exists
                 }
+            }
+
+            // Create contacts tables if not exist
+            const contactsTableExists = await db.query(`
+                SELECT COUNT(*) as count 
+                FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'contacts'
+            `);
+
+            if (parseInt(contactsTableExists.rows[0].count) === 0) {
+                console.log('📋 Creating contacts tables...');
+                await db.query(`
+                    CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+                    
+                    CREATE TABLE IF NOT EXISTS contacts (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        entity_type VARCHAR(20) NOT NULL CHECK (entity_type IN ('individual', 'juristic')),
+                        tax_id VARCHAR(13),
+                        branch_code VARCHAR(10) DEFAULT '00000',
+                        name_th VARCHAR(255) NOT NULL,
+                        name_en VARCHAR(255),
+                        nick_name VARCHAR(100),
+                        phone VARCHAR(50) NOT NULL,
+                        mobile VARCHAR(50),
+                        email VARCHAR(255),
+                        address_registration TEXT,
+                        address_shipping TEXT,
+                        bank_name VARCHAR(100),
+                        bank_account_number VARCHAR(50),
+                        bank_account_name VARCHAR(255),
+                        role VARCHAR(100),
+                        note TEXT,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_contacts_tax_id ON contacts(tax_id);
+                    CREATE INDEX IF NOT EXISTS idx_contacts_name_th ON contacts(name_th);
+                    CREATE INDEX IF NOT EXISTS idx_contacts_phone ON contacts(phone);
+                    CREATE INDEX IF NOT EXISTS idx_contacts_entity_type ON contacts(entity_type);
+
+                    CREATE TABLE IF NOT EXISTS contact_documents (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        contact_id UUID REFERENCES contacts(id) ON DELETE CASCADE,
+                        document_type VARCHAR(50) NOT NULL,
+                        file_name VARCHAR(255) NOT NULL,
+                        file_path TEXT NOT NULL,
+                        file_size INT,
+                        file_ext VARCHAR(10),
+                        is_active BOOLEAN DEFAULT TRUE,
+                        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_contact_docs_contact ON contact_documents(contact_id);
+                `);
+                console.log('✅ Contacts tables created.');
             }
 
             // Seed actual products if not exist

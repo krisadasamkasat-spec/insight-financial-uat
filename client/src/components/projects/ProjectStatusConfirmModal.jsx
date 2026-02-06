@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertCircle, ArrowRight, FolderKanban, X } from 'lucide-react';
+import Modal from '../common/Modal';
 
 const ProjectStatusConfirmModal = ({
     isOpen,
@@ -52,12 +53,14 @@ const ProjectStatusConfirmModal = ({
     const theme = getStatusTheme(newStatus);
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div
-                className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
-                onClick={onClose}
-            />
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            hideDefaultHeader={true}
+            bodyClassName="p-0"
+            size="md"
+        >
+            <div className="bg-white">
                 {/* Header */}
                 <div className={`p-6 border-b ${theme.bg} ${theme.border}`}>
                     <div className="flex items-start justify-between">
@@ -122,7 +125,7 @@ const ProjectStatusConfirmModal = ({
                     </div>
                 </div>
             </div>
-        </div>
+        </Modal>
     );
 };
 

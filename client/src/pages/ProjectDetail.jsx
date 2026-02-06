@@ -1,23 +1,24 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { Search, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Search, Plus, Pencil, Trash2, Info, TrendingUp, TrendingDown, Calendar, MapPin, Building2, Briefcase, Users, Link2, ExternalLink } from 'lucide-react';
+import { STATUS_DATA } from '../constants/expenseStatus';
 import { projectAPI } from '../services/api';
 import { formatNumber, formatDate, formatDateCE } from '../utils/formatters';
-import AddIncomeModal from '../components/finance/AddIncomeModal';
-import AddExpenseModal from '../components/finance/AddExpenseModal';
-import EditIncomeModal from '../components/finance/EditIncomeModal';
-import EditExpenseModal from '../components/finance/EditExpenseModal';
+import IncomeModal from '../components/finance/IncomeModal';
+import ExpenseModal from '../components/finance/ExpenseModal';
 import ProjectModal from '../components/projects/ProjectModal';
-import EditTeamMemberModal from '../components/team/EditTeamMemberModal';
 import ConfirmDeleteModal from '../components/common/ConfirmDeleteModal';
-import AddTeamMemberModal from '../components/team/AddTeamMemberModal';
-import ViewAttachmentsModal from '../components/common/ViewAttachmentsModal';
+import FileRepository from '../components/common/FileRepository';
 import AttachmentPreview from '../components/common/AttachmentPreview';
 import { useSettings } from '../contexts/SettingsContext';
 import StatusBadge from '../components/common/StatusBadge';
-import MinimalDropdown from '../components/common/MinimalDropdown';
+import Dropdown from '../components/common/Dropdown';
 import { useToast } from '../components/common/ToastProvider';
-import StatusChangeConfirmModal from '../components/projects/StatusChangeConfirmModal';
+import ExpenseListContent from '../components/finance/ExpenseListContent';
+import TransactionStatusModal from '../components/projects/TransactionStatusModal';
+import ProjectsCharts from '../components/projects/ProjectsCharts';
+import ProjectDateModal from '../components/projects/ProjectDateModal';
+import { Clock, CheckCircle2, MoreVertical } from 'lucide-react';
 
 const ProjectDetail = () => {
     const toast = useToast();
@@ -42,16 +43,17 @@ const ProjectDetail = () => {
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, type: null, data: null });
     const [isEditIncomeModalOpen, setIsEditIncomeModalOpen] = useState(false);
     const [isEditExpenseModalOpen, setIsEditExpenseModalOpen] = useState(false);
-    const [isTeamMemberModalOpen, setIsTeamMemberModalOpen] = useState(false);
-    const [isEditTeamModalOpen, setIsEditTeamModalOpen] = useState(false);
     const [isAttachmentsModalOpen, setIsAttachmentsModalOpen] = useState(false);
     const [selectedIncome, setSelectedIncome] = useState(null);
     const [selectedExpense, setSelectedExpense] = useState(null);
-    const [selectedTeamMember, setSelectedTeamMember] = useState(null);
     const [selectedAttachments, setSelectedAttachments] = useState([]);
     // [NEW] Status Change Confirmation State
     const [pendingStatusChange, setPendingStatusChange] = useState(null);
     const [refreshKey, setRefreshKey] = useState(0);
+
+    // Project Date Modal State
+    const [isDateModalOpen, setIsDateModalOpen] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(null);
 
     // Filters for Income/Expense tabs
     const [incomeSearch, setIncomeSearch] = useState('');
@@ -59,85 +61,86 @@ const ProjectDetail = () => {
     const [expenseSearch, setExpenseSearch] = useState('');
     const [expenseStatusFilter, setExpenseStatusFilter] = useState('all');
 
-    // Fetch Data
+
+    const fetchProjectData = async () => {
+        setIsLoading(true);
+        try {
+            // Parallel fetch
+            const [projectRes, incomesRes, expensesRes, accountsRes, productsRes] = await Promise.all([
+                projectAPI.getProject(projectCode),
+                projectAPI.getIncomesByProject(projectCode),
+                projectAPI.getExpensesByProject(projectCode),
+                projectAPI.getAllAccounts(),
+                projectAPI.getAllProducts()
+            ]);
+
+            // Map DB keys to Frontend keys if necessary
+            const p = projectRes.data;
+            const mappedProject = {
+                projectCode: p.project_code,
+                projectName: p.project_name,
+                projectType: p.project_type,
+                productCode: p.product_code,
+                company: p.customer_name,
+                status: p.status,
+                startDate: p.start_date,
+                endDate: p.end_date,
+                location: p.location,
+                description: p.description,
+                budget: p.budget ? parseFloat(p.budget) : null,
+                participantCount: p.participant_count,
+                teamMembers: (p.team_members || []).map(tm => ({
+                    id: tm.member_id, // Use member_id as unique key for list
+                    member_id: tm.member_id,
+                    member: {
+                        id: tm.member_id,
+                        name: tm.name,
+                        nickname: tm.nickname
+                    },
+                    role: tm.role,
+                    rate: tm.rate,
+                    status: tm.status
+                })),
+                externalLinks: p.external_links ? JSON.parse(p.external_links) : [],
+                dates: p.dates || []
+            };
+
+            setProject(mappedProject);
+            setProducts(productsRes.data || []);
+
+            // The API returns snake_case for DB columns. 
+            // Let's create a quick mapper or adjust the UI to use snake_case.
+            // For safety/speed, I'll map to camelCase to match existing UI code.
+            setProjectExpenses(expensesRes.data);
+
+            const mappedIncomes = incomesRes.data.map(i => ({
+                id: i.id,
+                projectCode: i.project_code,
+                description: i.description,
+                invoiceNo: i.invoice_no,
+                due_date: i.due_date,
+                amount: parseFloat(i.amount),
+                status: i.status,
+                financial_account_id: i.financial_account_id,
+                attachments: i.attachments || []
+            }));
+            setProjectIncomes(mappedIncomes);
+
+            // [NEW] Set Primary Account
+            const primary = accountsRes.data.find(acc => acc.is_primary) || accountsRes.data[0];
+            setPrimaryAccount(primary);
+
+        } catch (error) {
+            console.error("Failed to fetch project data", error);
+            // toast.error("Could not load project data");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     React.useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                // Parallel fetch
-                const [projectRes, incomesRes, expensesRes, accountsRes, productsRes] = await Promise.all([
-                    projectAPI.getProject(projectCode),
-                    projectAPI.getIncomesByProject(projectCode),
-                    projectAPI.getExpensesByProject(projectCode),
-                    projectAPI.getAllAccounts(),
-                    projectAPI.getAllProducts()
-                ]);
-
-                // Map DB keys to Frontend keys if necessary
-                const p = projectRes.data;
-                const mappedProject = {
-                    projectCode: p.project_code,
-                    projectName: p.project_name,
-                    projectType: p.project_type,
-                    productCode: p.product_code,
-                    company: p.customer_name,
-                    status: p.status,
-                    startDate: p.start_date,
-                    endDate: p.end_date,
-                    location: p.location,
-                    description: p.description,
-                    budget: p.budget ? parseFloat(p.budget) : null,
-                    participantCount: p.participant_count,
-                    teamMembers: (p.team_members || []).map(tm => ({
-                        id: tm.member_id, // Use member_id as unique key for list
-                        member_id: tm.member_id,
-                        member: {
-                            id: tm.member_id,
-                            name: tm.name,
-                            nickname: tm.nickname
-                        },
-                        role: tm.role,
-                        rate: tm.rate,
-                        status: tm.status
-                    }))
-                };
-
-                setProject(mappedProject);
-                setProjectIncomes(incomesRes.data);
-                setProducts(productsRes.data);
-
-                // Expenses (DB fields need minimal mapping usually, keeping raw response mainly)
-                // However, our frontend might expect camelCase. Let's map if needed.
-                // The API returns snake_case for DB columns. 
-                // Let's create a quick mapper or adjust the UI to use snake_case.
-                // For safety/speed, I'll map to camelCase to match existing UI code.
-                setProjectExpenses(expensesRes.data);
-
-                const mappedIncomes = incomesRes.data.map(i => ({
-                    id: i.id,
-                    projectCode: i.project_code,
-                    description: i.description,
-                    invoiceNo: i.invoice_no,
-                    date: i.date,
-                    amount: parseFloat(i.amount),
-                    status: i.status,
-                    attachments: i.attachments || []
-                }));
-                setProjectIncomes(mappedIncomes);
-
-                // [NEW] Set Primary Account
-                const primary = accountsRes.data.find(acc => acc.is_primary) || accountsRes.data[0];
-                setPrimaryAccount(primary);
-
-            } catch {
-                console.error("Failed to fetch project data");
-                // toast.error("Could not load project data");
-            } finally {
-                setIsLoading(false);
-            }
-        };
         if (projectCode) {
-            fetchData();
+            fetchProjectData();
         }
     }, [projectCode, refreshKey]);
 
@@ -198,13 +201,13 @@ const ProjectDetail = () => {
             await projectAPI.createIncome({
                 project_code: projectCode,
                 description: newIncome.description,
-                invoice_no: newIncome.invoiceNo,
-                date: newIncome.date,
+                due_date: newIncome.due_date,
                 amount: newIncome.amount,
                 status: newIncome.status || 'pending',
-                created_by: 1 // Default Admin
+                financial_account_id: newIncome.financial_account_id
             });
             setRefreshKey(p => p + 1);
+            setIsIncomeModalOpen(false);
             toast.success('เพิ่มรายรับสำเร็จ');
         } catch (err) {
             console.error(err);
@@ -257,12 +260,13 @@ const ProjectDetail = () => {
         try {
             await projectAPI.updateIncome(selectedIncome.id, {
                 description: updated.description,
-                invoice_no: updated.invoiceNo,
-                date: updated.date,
+                due_date: updated.due_date,
                 amount: updated.amount,
-                status: updated.status
+                status: updated.status,
+                financial_account_id: updated.financial_account_id
             });
             setRefreshKey(p => p + 1);
+            setIsEditIncomeModalOpen(false);
             toast.success('อัปเดตรายรับสำเร็จ');
         } catch (err) {
             console.error(err);
@@ -389,61 +393,13 @@ const ProjectDetail = () => {
         }
     };
 
-    // Team Management
-    const handleAddTeamMember = async (newMember) => {
-        try {
-            await projectAPI.addTeamMember(projectCode, {
-                member_id: newMember.memberId || newMember.member_id,
-                role: newMember.role,
-                rate: newMember.rate,
-                status: newMember.status
-            });
-            setRefreshKey(p => p + 1);
-            toast.success('เพิ่มสมาชิกทีมสำเร็จ');
-        } catch (error) {
-            console.error(error);
-            toast.error('Failed to add team member');
-        }
-    };
-
-    const handleEditTeamMember = (assignment) => {
-        // assignment is the object from projectTeam array: { member_id, role, rate, status, ... }
-        // We need to map it to what EditTeamMemberModal expects
-        setSelectedTeamMember(assignment);
-        setIsEditTeamModalOpen(true);
-    };
-
-    const handleUpdateTeamMember = async (updated) => {
-        try {
-            await projectAPI.updateTeamMember(projectCode, updated.member_id, {
-                role: updated.role,
-                rate: updated.rate,
-                status: updated.status
-            });
-            setRefreshKey(p => p + 1);
-            toast.success('อัปเดตข้อมูลทีมสำเร็จ');
-        } catch (error) {
-            console.error(error);
-            toast.error('Failed to update team member');
-        }
-    };
-
-    const handleRemoveTeamMember = async (memberId) => {
-        if (!window.confirm('คุณต้องการลบสมาชิกคนนี้ใช่หรือไม่?')) return;
-        try {
-            await projectAPI.removeTeamMember(projectCode, memberId);
-            setRefreshKey(p => p + 1);
-            toast.success('ลบสมาชิกทีมสำเร็จ');
-        } catch (error) {
-            console.error(error);
-            toast.error('Failed to remove team member');
-        }
-    };
-
     const handleViewAttachments = (attachments) => {
         setSelectedAttachments(attachments);
         setIsAttachmentsModalOpen(true);
     };
+
+    const expenseStatusOptions = STATUS_DATA;
+
 
     const handleUpdateProjectStatus = async (newStatus) => {
         try {
@@ -480,17 +436,9 @@ const ProjectDetail = () => {
 
     const incomeStatusOptions = [
         { value: 'pending', label: 'รอรับ', color: 'yellow' },
-        { value: 'Received', label: 'ได้รับแล้ว', color: 'emerald' }
+        { value: 'received', label: 'ได้รับแล้ว', color: 'emerald' }
     ];
-    const expenseStatusOptions = [
-        { value: 'ส่งเบิกแล้ว รอเอกสารตัวจริง', label: 'รอเอกสาร', color: 'yellow' },
-        { value: 'บัญชีตรวจ และ ได้รับเอกสารตัวจริง', label: 'บัญชีตรวจแล้ว', color: 'blue' },
-        { value: 'VP อนุมัติแล้ว ส่งเบิกได้', label: 'VP อนุมัติแล้ว', color: 'purple' },
-        { value: 'ส่งเข้า PEAK', label: 'ส่งเข้า PEAK', color: 'indigo' },
-        { value: 'โอนแล้ว รอส่งหลักฐาน', label: 'รอส่งหลักฐาน', color: 'cyan' },
-        { value: 'ส่งหลักฐานแล้ว เอกสารครบ', label: 'ส่งหลักฐานแล้ว', color: 'green' },
-        { value: 'reject ยกเลิก / รอแก้ไข', label: 'ยกเลิก / รอแก้ไข', color: 'red' }
-    ];
+
 
 
     if (isLoading) {
@@ -509,12 +457,9 @@ const ProjectDetail = () => {
     }
 
     const tabs = [
-        { id: 'overview', label: 'ภาพรวมการเงิน', icon: '📊' },
-        { id: 'projectInfo', label: 'ข้อมูลโปรเจค', icon: '📋' },
-        { id: 'income', label: 'รายรับ', icon: '💰' },
-        { id: 'expense', label: 'รายจ่าย', icon: '💸' },
-        { id: 'documents', label: 'เอกสาร', icon: '📁' },
-        { id: 'activities', label: 'กิจกรรม', icon: '📋' }
+        { id: 'projectInfo', label: 'ข้อมูลโปรเจค', icon: <Info className="w-4 h-4" /> },
+        { id: 'income', label: 'รายรับ', icon: <TrendingUp className="w-4 h-4" /> },
+        { id: 'expense', label: 'รายจ่าย', icon: <TrendingDown className="w-4 h-4" /> }
     ];
 
     const grossProfit = totalIncomeAmount - totalExpenseAmount;
@@ -524,477 +469,407 @@ const ProjectDetail = () => {
 
     // ===== TAB COMPONENTS =====
 
-    const OverviewTab = () => (
-        <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center"><span className="text-white text-lg">💼</span></div>
-                        <span className="text-sm font-medium text-blue-700">งบประมาณ</span>
-                    </div>
-                    <p className={`text-2xl font-bold ${project.budget ? 'text-blue-900' : 'text-gray-400'}`}>{formatBudget(project.budget)}</p>
-                    {budgetUsagePercent !== null && <p className={`text-xs mt-1 ${parseFloat(budgetUsagePercent) > 100 ? 'text-red-600' : 'text-blue-600'}`}>ใช้ไป: {budgetUsagePercent}%</p>}
-                </div>
-                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center"><span className="text-white text-lg">📈</span></div>
-                        <span className="text-sm font-medium text-green-700">รายรับ</span>
-                    </div>
-                    <p className="text-2xl font-bold text-green-900">฿{formatNumber(totalIncomeAmount)}</p>
-                </div>
-                <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-5 border border-red-200">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center"><span className="text-white text-lg">📉</span></div>
-                        <span className="text-sm font-medium text-red-700">รายจ่าย</span>
-                    </div>
-                    <p className="text-2xl font-bold text-red-900">฿{formatNumber(totalExpenseAmount)}</p>
-                    <p className="text-xs text-red-600 mt-1">{projectExpenses.length} รายการ</p>
-                </div>
-                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 border border-purple-200">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center"><span className="text-white text-lg">✨</span></div>
-                        <span className="text-sm font-medium text-purple-700">กำไรขั้นต้น</span>
-                    </div>
-                    <p className={`text-2xl font-bold ${grossProfit >= 0 ? 'text-purple-900' : 'text-red-600'}`}>฿{formatNumber(grossProfit)}</p>
-                    <p className="text-xs text-purple-600 mt-1">Margin: {profitMargin}%</p>
-                </div>
-            </div>
-        </div>
-    );
 
-    // ===== PROJECT INFO TAB (ใหม่) =====
-    const ProjectInfoTab = () => (
-        <div className="space-y-6">
-            {/* ข้อมูลทั่วไป - Redesigned */}
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                {/* Header with Project Type Badge */}
-                <div className={`px-5 py-4 border-b ${getColorsByProjectType(project.projectType).bgLight} ${getColorsByProjectType(project.projectType).border}`}>
-                    <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className={`px-2.5 py-0.5 rounded-md text-xs font-semibold ${getColorsByProjectType(project.projectType).bg} ${getColorsByProjectType(project.projectType).text}`}>
-                                    {project.projectType}
-                                </span>
-                                {project.participantCount && (
-                                    <span className="text-xs text-gray-500 bg-white/80 px-2 py-0.5 rounded-full">
-                                        👥 {project.participantCount} คน
-                                    </span>
-                                )}
+
+    // ===== PROJECT INFO TAB (ตารางงาน) =====
+    const ProjectInfoTab = () => {
+        // Handlers for Dates
+        const handleSaveDate = async (dateData) => {
+            try {
+                const currentDates = project.dates || [];
+                let newDates;
+
+                if (selectedDate) {
+                    newDates = currentDates.map(d => d.id === selectedDate.id ? { ...d, ...dateData } : d);
+                } else {
+                    newDates = [...currentDates, dateData];
+                }
+
+                await projectAPI.updateProject(projectCode, { dates: newDates });
+                setRefreshKey(prev => prev + 1);
+                toast.success(selectedDate ? 'แก้ไขกำหนดการสำเร็จ' : 'เพิ่มกำหนดการสำเร็จ');
+                setIsDateModalOpen(false);
+                setSelectedDate(null);
+            } catch (error) {
+                console.error("Failed to save date:", error);
+                toast.error("บันทึกกำหนดการล้มเหลว");
+            }
+        };
+
+        const handleDeleteDate = async (dateId) => {
+            if (!window.confirm("ยืนยันการลบกำหนดการนี้?")) return;
+            try {
+                await projectAPI.deleteProjectDate(dateId);
+                setRefreshKey(prev => prev + 1);
+                toast.success("ลบกำหนดการสำเร็จ");
+            } catch (error) {
+                console.error("Failed to delete date:", error);
+                toast.error("ลบกำหนดการล้มเหลว");
+            }
+        };
+
+        const openAddDate = () => {
+            setSelectedDate(null);
+            setIsDateModalOpen(true);
+        };
+
+        const openEditDate = (date) => {
+            setSelectedDate(date);
+            setIsDateModalOpen(true);
+        };
+
+        const sortedDates = [...(project.dates || [])].sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+
+        return (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Column: Schedule (2/3) */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Header / Toolbar */}
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <Calendar className="w-5 h-5 text-blue-600" />
+                            ตารางงาน / กำหนดการ
+                        </h2>
+                        <button
+                            onClick={openAddDate}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
+                        >
+                            <Plus className="w-4 h-4" />
+                            เพิ่มกำหนดการ
+                        </button>
+                    </div>
+
+                    {/* Date List */}
+                    <div className="space-y-4">
+                        {sortedDates.length > 0 ? (
+                            sortedDates.map((date, index) => {
+                                const startDate = new Date(date.start_date);
+                                const endDate = date.end_date ? new Date(date.end_date) : startDate;
+                                const isSameDay = startDate.toDateString() === endDate.toDateString();
+
+                                return (
+                                    <div key={date.id || index} className="group bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-all relative">
+                                        <div className="flex flex-col md:flex-row gap-6">
+                                            {/* Date Box */}
+                                            <div className="flex-shrink-0 w-full md:w-48 bg-blue-50/50 rounded-lg p-3 text-center border border-blue-100/50 flex flex-col justify-center">
+                                                <span className="text-sm text-blue-600 font-medium mb-1">
+                                                    {startDate.toLocaleDateString('th-TH', { weekday: 'long' })}
+                                                </span>
+                                                <div className="text-3xl font-bold text-gray-800 mb-1">
+                                                    {startDate.getDate()}
+                                                </div>
+                                                <span className="text-sm text-gray-500">
+                                                    {startDate.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })}
+                                                </span>
+                                                {!isSameDay && (
+                                                    <div className="mt-2 pt-2 border-t border-blue-200/50 text-xs text-blue-500">
+                                                        ถึง {endDate.getDate()} {endDate.toLocaleDateString('th-TH', { month: 'short' })}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Content */}
+                                            <div className="flex-grow">
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <h3 className="text-lg font-bold text-gray-900 mb-2">{date.date_name || date.title || "ไม่มีชื่อกำหนดการ"}</h3>
+
+                                                        <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
+                                                            <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1 rounded-full">
+                                                                <Clock className="w-4 h-4 text-gray-400" />
+                                                                {startDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                                                                {date.end_date && ` - ${endDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`}
+                                                            </div>
+                                                            {date.location && (
+                                                                <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1 rounded-full">
+                                                                    <MapPin className="w-4 h-4 text-gray-400" />
+                                                                    {date.location}
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {date.description && (
+                                                            <p className="text-gray-600 text-sm leading-relaxed bg-gray-50/50 p-3 rounded-lg border border-gray-100">
+                                                                {date.description}
+                                                            </p>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Actions */}
+                                                    <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => openEditDate(date)}
+                                                            className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            title="แก้ไข"
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteDate(date.id)}
+                                                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="ลบ"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="text-center py-16 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                                    <Calendar className="w-8 h-8 text-gray-300" />
+                                </div>
+                                <h3 className="text-lg font-medium text-gray-900 mb-1">ยังไม่มีกำหนดการ</h3>
+                                <p className="text-gray-500 mb-6">สร้างกำหนดการทำงานสำหรับโปรเจคนี้</p>
+                                <button
+                                    onClick={openAddDate}
+                                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors shadow-sm"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    เพิ่มกำหนดการแรก
+                                </button>
                             </div>
-                            {project.productCode && (
-                                <h4 className="text-lg font-semibold text-gray-900 leading-snug">
-                                    {getProductName(project.productCode)}
-                                </h4>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right Column: Links & Info (1/3) */}
+                <div className="lg:col-span-1 space-y-6">
+                    {/* Additional Info Section */}
+                    {project.description && (
+                        <div>
+                            <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                <Info className="w-4 h-4 text-gray-400" />
+                                รายละเอียดเพิ่มเติม
+                            </h4>
+                            <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600 leading-relaxed border border-gray-200">
+                                {project.description}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* External Links */}
+                    <div className="sticky top-6">
+                        <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                            <Link2 className="w-4 h-4 text-gray-400" />
+                            ลิงก์ภายนอก / ไฟล์งาน
+                        </h4>
+                        <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-3 shadow-sm">
+                            <div className="flex items-center justify-between p-3 bg-blue-50/50 rounded-lg border border-blue-100/50">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-white rounded-md shadow-sm">
+                                        <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" alt="Drive" className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-900">Google Drive</p>
+                                        <p className="text-xs text-gray-500">เก็บไฟล์และเอกสารของโปรเจค</p>
+                                    </div>
+                                </div>
+                                <button className="text-xs font-medium text-blue-600 hover:text-blue-700 bg-white px-3 py-1.5 rounded-md border border-blue-200 shadow-sm hover:shadow transition-all">
+                                    เชื่อมต่อ
+                                </button>
+                            </div>
+
+                            {project.externalLinks && project.externalLinks.map((link, idx) => (
+                                <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors border border-transparent hover:border-gray-100 group">
+                                    <div className="p-2 bg-gray-100 text-gray-500 rounded-md group-hover:bg-white group-hover:text-blue-600 group-hover:shadow-sm transition-all">
+                                        <Link2 className="w-4 h-4" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-gray-900 truncate">{link.title || link.url}</p>
+                                        <p className="text-xs text-gray-500 truncate">{link.url}</p>
+                                    </div>
+                                    <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
+                                </a>
+                            ))}
+                            {(!project.externalLinks || project.externalLinks.length === 0) && (
+                                <button className="w-full py-2 text-xs text-center text-gray-400 hover:text-blue-600 hover:bg-gray-50 rounded border border-dashed border-gray-200 transition-colors">
+                                    + เพิ่มลิงก์
+                                </button>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* Content Grid */}
-                <div className="p-5">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        {/* Date Range Card */}
-                        <div className="bg-gray-50 rounded-lg p-3">
-                            <div className="flex items-center gap-2 text-gray-500 text-xs mb-1.5">
-                                <span>📅</span> ระยะเวลา
-                            </div>
-                            <p className="text-sm font-medium text-gray-900">
-                                {formatDate(project.startDate)} - {formatDate(project.endDate)}
-                            </p>
-                        </div>
-
-                        {/* Location Card */}
-                        <div className="bg-gray-50 rounded-lg p-3">
-                            <div className="flex items-center gap-2 text-gray-500 text-xs mb-1.5">
-                                <span>📍</span> สถานที่
-                            </div>
-                            <p className="text-sm font-medium text-gray-900">{project.location || '-'}</p>
-                        </div>
-
-                        {/* Company Card */}
-                        <div className="bg-gray-50 rounded-lg p-3">
-                            <div className="flex items-center gap-2 text-gray-500 text-xs mb-1.5">
-                                <span>🏢</span> ลูกค้า
-                            </div>
-                            <p className="text-sm font-medium text-gray-900 truncate" title={project.company}>{project.company || '-'}</p>
-                        </div>
-                    </div>
-
-                    {/* Description */}
-                    {project.description && (
-                        <div className="pt-3 border-t border-gray-100">
-                            <p className="text-xs text-gray-500 mb-1">📝 คำอธิบาย</p>
-                            <p className="text-sm text-gray-700 leading-relaxed">{project.description}</p>
-                        </div>
-                    )}
-                </div>
+                {/* Date Modal */}
+                <ProjectDateModal
+                    isOpen={isDateModalOpen}
+                    onClose={() => setIsDateModalOpen(false)}
+                    onSubmit={handleSaveDate}
+                    dateData={selectedDate}
+                    existingDates={project.dates || []}
+                />
             </div>
-
-            {/* ทีมงาน + ลิงก์ภายนอก (Flex Layout - Team 60%, Link 40%) */}
-            <div className="flex flex-col lg:flex-row gap-6">
-                {/* ทีมงาน (60%) */}
-                <div className="w-full lg:w-[60%] bg-white rounded-xl border border-gray-200 p-5">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                            <span>👥</span> ทีมงาน
-                            <span className="text-sm font-normal text-gray-500">({projectTeam.length} คน)</span>
-                        </h3>
-                        <button onClick={() => setIsTeamMemberModalOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded-lg transition-colors">
-                            <Plus className="w-3.5 h-3.5" /> เพิ่ม
-                        </button>
-                    </div>
-                    {projectTeam.length > 0 ? (
-                        <div className="space-y-2">
-                            {projectTeam.map(t => (
-                                <div key={t.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
-                                    <div className="w-9 h-9 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-medium text-sm shadow-sm">
-                                        {t.member?.nickname?.charAt(0) || '?'}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-gray-900 truncate">{t.member?.nickname || '-'}</p>
-                                        <p className="text-xs text-gray-500 truncate">{t.member?.name || '-'}</p>
-                                    </div>
-                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => handleEditTeamMember(t)} className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-100 rounded transition-colors" title="แก้ไข">
-                                            <Pencil className="w-3.5 h-3.5" />
-                                        </button>
-                                        <button onClick={() => handleRemoveTeamMember(t.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-100 rounded transition-colors" title="ลบ">
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-6">
-                            <div className="w-12 h-12 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                                <span className="text-xl">👥</span>
-                            </div>
-                            <p className="text-gray-400 text-sm">ยังไม่มีทีมงาน</p>
-                        </div>
-                    )}
-                </div>
-
-                {/* ลิงก์ภายนอก (40%) */}
-                <div className="w-full lg:w-[40%] bg-white rounded-xl border border-gray-200 p-5">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-semibold text-gray-900 flex items-center gap-2"><span>🔗</span> ลิงก์ภายนอก</h3>
-                        <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">+ เพิ่มลิงก์</button>
-                    </div>
-                    {(project.externalLinks && project.externalLinks.length > 0) ? (
-                        <div className="space-y-2">
-                            {project.externalLinks.map((link, idx) => (
-                                <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
-                                    <span className="text-xl">{link.icon || '🔗'}</span>
-                                    <span className="flex-1 text-sm text-blue-600 group-hover:underline truncate">{link.label}</span>
-                                </a>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-6">
-                            <div className="w-12 h-12 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                                <span className="text-2xl">📁</span>
-                            </div>
-                            <p className="text-gray-400 text-sm mb-2">ยังไม่มีลิงก์ภายนอก</p>
-                            <p className="text-xs text-gray-300">Google Drive จะถูกเชื่อมต่ออัตโนมัติ</p>
-                        </div>
-                    )}
-
-                    {/* Future: Google Drive Integration Placeholder */}
-                    <div className="mt-4 pt-4 border-t border-gray-100">
-                        <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
-                            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm">
-                                <svg className="w-5 h-5" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da" />
-                                    <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47" />
-                                    <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335" />
-                                    <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d" />
-                                    <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc" />
-                                    <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00" />
-                                </svg>
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-xs font-medium text-gray-700">Google Drive</p>
-                                <p className="text-xs text-gray-400">เชื่อมต่อโฟลเดอร์โปรเจค</p>
-                            </div>
-                            <button className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-white rounded-lg border border-blue-200 hover:bg-blue-50 transition-colors">
-                                เชื่อมต่อ
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+        );
+    };
 
     const IncomeTab = () => (
-        <div>
-            <div className="flex flex-wrap gap-3 items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="ค้นหารายรับ..."
-                            value={incomeSearch}
-                            onChange={(e) => setIncomeSearch(e.target.value)}
-                            className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-56"
-                        />
-                    </div>
-                    <MinimalDropdown
-                        label="สถานะ"
-                        value={incomeStatusFilter}
-                        options={['รอรับ', 'ได้รับแล้ว']}
-                        onChange={(v) => setIncomeStatusFilter(v === 'รอรับ' ? 'pending' : v === 'ได้รับแล้ว' ? 'Received' : 'all')}
-                        allLabel="ทั้งหมด"
-                    />
-                    <span className="text-sm text-gray-500">{filteredIncomes.length} / {projectIncomes.length} รายการ</span>
-                </div>
-                <button onClick={() => setIsIncomeModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors">
-                    <Plus className="w-4 h-4" /> เพิ่มรายรับ
-                </button>
-            </div>
-            {filteredIncomes.length > 0 ? (
-                <div className="bg-white rounded-xl border border-gray-200">
-                    <table className="w-full">
-                        <thead className="bg-gray-50 border-b border-gray-200">
-                            <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">รายละเอียด</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">วันที่รับ</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">สถานะ</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">เอกสาร</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">จำนวนเงิน</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {filteredIncomes.map((income, idx) => (
-                                <tr key={income.id || idx} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-4 py-3"><div className="text-sm text-gray-900">{income.description || 'รายรับจากโปรเจค'}</div></td>
-                                    <td className="px-4 py-3 text-sm text-gray-500">{formatDate(income.date)}</td>
-                                    <td className="px-4 py-3"><StatusBadge status={income.status} options={incomeStatusOptions} onChange={(s) => handleUpdateIncomeStatus(income.id, s)} /></td>
-                                    <td className="px-4 py-3 text-center">
-                                        <AttachmentPreview attachments={income.attachments || []} onOpenModal={() => handleViewAttachments(income.attachments)} size="sm" />
-                                    </td>
-                                    <td className="px-4 py-3 text-right"><span className="text-sm font-semibold text-green-600">฿{formatNumber(income.amount)}</span></td>
-                                    <td className="px-4 py-3 text-center">
-                                        <button onClick={() => handleEditIncome(income)} className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors">
-                                            <Pencil className="w-4 h-4" />
-                                        </button>
-                                        <button onClick={() => requestDeleteIncome(income)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors ml-1">
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                        <tfoot className="bg-gray-50 border-t border-gray-200">
-                            <tr><td colSpan="4" className="px-4 py-3 text-right text-sm font-semibold text-gray-600">รวมทั้งสิ้น</td><td className="px-4 py-3 text-right"><span className="text-base font-bold text-green-500">฿{formatNumber(totalIncomeAmount)}</span></td><td></td></tr>
-                        </tfoot>
-                    </table>
-                </div>
-            ) : (
-                <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><span className="text-2xl">💰</span></div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">ไม่มีรายรับ</h3>
-                    <p className="text-gray-500 mb-4">ยังไม่มีรายรับสำหรับโปรเจคนี้</p>
-                </div>
-            )}
-        </div>
-    );
+        <>
+            {/* Filter Bar - Matching ExpenseListContent */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 w-full md:w-auto">
+                        {/* Search */}
+                        <div className="relative flex-1 md:w-64">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="ค้นหารายรับ..."
+                                value={incomeSearch}
+                                onChange={(e) => setIncomeSearch(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                            />
+                        </div>
 
-    const ExpenseTab = () => (
-        <div>
-            <div className="flex flex-wrap gap-3 items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="ค้นหารายจ่าย..."
-                            value={expenseSearch}
-                            onChange={(e) => setExpenseSearch(e.target.value)}
-                            className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-56"
-                        />
+                        {/* Status Filter */}
+                        <div className="flex items-center">
+                            <Dropdown
+                                inline
+                                showAllOption
+                                label="สถานะ"
+                                value={incomeStatusFilter}
+                                options={['รอรับ', 'ได้รับแล้ว']}
+                                onChange={(v) => setIncomeStatusFilter(v === 'รอรับ' ? 'pending' : v === 'ได้รับแล้ว' ? 'received' : 'all')}
+                                allLabel="ทั้งหมด"
+                                minWidth="100px"
+                                listMinWidth="120px"
+                            />
+                        </div>
+
+                        {/* Count */}
+                        <span className="text-sm text-gray-500 whitespace-nowrap">
+                            {filteredIncomes.length} / {projectIncomes.length} รายการ
+                        </span>
                     </div>
-                    <MinimalDropdown
-                        label="สถานะ"
-                        value={expenseStatusFilter}
-                        options={['ส่งเบิกแล้ว รอเอกสารตัวจริง', 'บัญชีตรวจ และ ได้รับเอกสารตัวจริง', 'VP อนุมัติแล้ว ส่งเบิกได้', 'ส่งเข้า PEAK', 'โอนแล้ว รอส่งหลักฐาน', 'ส่งหลักฐานแล้ว เอกสารครบ', 'reject ยกเลิก / รอแก้ไข']}
-                        onChange={(v) => setExpenseStatusFilter(v === 'all' ? 'all' : v)}
-                        allLabel="ทั้งหมด"
-                    />
-                    <span className="text-sm text-gray-500">{filteredExpenses.length} / {projectExpenses.length} รายการ</span>
+
+                    {/* Add Button */}
+                    <button
+                        onClick={() => setIsIncomeModalOpen(true)}
+                        className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-sm hover:shadow-md whitespace-nowrap"
+                    >
+                        <Plus className="w-4 h-4" />
+                        เพิ่มรายรับ
+                    </button>
                 </div>
-                <button onClick={() => setIsExpenseModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-medium rounded-lg transition-colors shadow-sm">
-                    <Plus className="w-4 h-4" /> เพิ่มรายจ่าย
-                </button>
             </div>
-            {filteredExpenses.length > 0 ? (
-                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+
+            {/* Table */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead className="bg-gray-50/80 border-b border-gray-200">
-                            <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">ประเภท</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">รหัส</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">รายละเอียด</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">ผู้รับเงิน</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">กำหนดจ่าย</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">จำนวนเงิน</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">ไฟล์แนบ</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">สถานะ</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">จัดการ</th>
+                        <thead>
+                            <tr className="bg-gray-50/80 border-b border-gray-100">
+                                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">รายละเอียด</th>
+                                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">วันคาดการณ์</th>
+                                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">จำนวนเงิน</th>
+                                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">ไฟล์แนบ</th>
+                                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">สถานะ</th>
+                                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">จัดการ</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                            {filteredExpenses.map((expense, idx) => (
-                                <tr key={expense.id || idx} className={`hover:bg-blue-50/30 transition-colors ${idx % 2 === 1 ? 'bg-gray-50/30' : ''} [&>td]:align-middle`}>
-                                    <td className="px-4 py-3">
-                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${expense.expense_type === 'เบิกที่สำรองจ่าย' ? 'bg-orange-50 text-orange-600 border border-orange-200' : 'bg-blue-50 text-blue-600 border border-blue-200'}`}>
-                                            {expense.expense_type || 'วางบิล'}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <span className="text-sm font-medium text-gray-900">{expense.account_code || expense.id}</span>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <div className="font-medium text-sm text-gray-900">{expense.account_title || '-'}</div>
-                                        <div className="text-xs text-gray-500">{expense.description || '-'}</div>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        {/* Logic: PaybackTo is primary (who gets money). Contact is secondary (shop/person dealing with). */}
-                                        {expense.payback_to ? (
-                                            <div>
-                                                <div className="text-sm text-gray-900 font-medium">{expense.payback_to}</div>
-                                                {expense.contact && expense.contact !== expense.payback_to && (
-                                                    <div className="text-xs text-gray-500">({expense.contact})</div>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div>
-                                                <div className="text-sm text-gray-700">{expense.contact || '-'}</div>
-                                                {expense.bill_header && expense.bill_header !== expense.contact && (
-                                                    <div className="text-xs text-gray-400">{expense.bill_header}</div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-gray-500">{formatDateCE(expense.due_date)}</td>
-                                    <td className="px-4 py-3 text-right">
-                                        <span className="text-sm font-semibold text-red-600">฿{formatNumber(expense.net_amount)}</span>
-                                    </td>
-                                    <td className="px-4 py-3 text-center">
-                                        <AttachmentPreview attachments={expense.attachments || []} onOpenModal={() => handleViewAttachments(expense.attachments)} size="sm" />
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <StatusBadge
-                                            status={expense.internal_status}
-                                            options={expenseStatusOptions}
-                                            readOnly={true}
-                                        />
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <div className="flex items-center justify-center gap-1">
-                                            <button onClick={() => handleEditExpense(expense)} className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors">
-                                                <Pencil className="w-4 h-4" />
-                                            </button>
-                                            <button onClick={() => requestDeleteExpense(expense)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
+                            {filteredIncomes.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="text-center py-12 text-gray-400">
+                                        ไม่พบรายการ
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                filteredIncomes.map((income, idx) => (
+                                    <tr
+                                        key={income.id || idx}
+                                        className={`hover:bg-blue-50/30 transition-colors ${idx % 2 === 1 ? 'bg-gray-50/30' : ''}`}
+                                    >
+                                        <td className="px-4 py-3">
+                                            <div className="font-medium text-sm text-gray-900">{income.description || 'รายรับจากโปรเจค'}</div>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-gray-500">
+                                            {formatDateCE(income.due_date) || '-'}
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                            <span className="text-sm font-semibold text-green-600">
+                                                ฿{formatNumber(income.amount)}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <AttachmentPreview
+                                                attachments={income.attachments || []}
+                                                onOpenModal={() => handleViewAttachments(income.attachments)}
+                                                size="sm"
+                                            />
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <StatusBadge
+                                                status={income.status}
+                                                options={incomeStatusOptions}
+                                                onChange={(s) => handleUpdateIncomeStatus(income.id, s)}
+                                            />
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-center gap-1">
+                                                <button
+                                                    onClick={() => handleEditIncome(income)}
+                                                    className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors"
+                                                    title="แก้ไข"
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => requestDeleteIncome(income)}
+                                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                                    title="ลบ"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
-                        <tfoot className="bg-gray-50/80 border-t border-gray-200">
-                            <tr>
-                                <td colSpan="7" className="px-4 py-3 text-right text-sm font-medium text-gray-600">รวมทั้งสิ้น</td>
-                                <td className="px-4 py-3 text-right">
-                                    <span className="text-base font-bold text-orange-600">฿{formatNumber(totalExpenseAmount)}</span>
-                                </td>
-                                <td></td>
-                            </tr>
-                        </tfoot>
+
+                        {/* Total Footer */}
+                        {filteredIncomes.length > 0 && (
+                            <tfoot>
+                                <tr className="bg-gray-50/80 border-t border-gray-200">
+                                    <td colSpan={2} className="px-4 py-3 text-right">
+                                        <span className="text-sm font-medium text-gray-600">รวมทั้งสิ้น</span>
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                        <span className="text-base font-bold text-green-600">
+                                            ฿{formatNumber(totalIncomeAmount)}
+                                        </span>
+                                    </td>
+                                    <td colSpan={3}></td>
+                                </tr>
+                            </tfoot>
+                        )}
                     </table>
                 </div>
-            ) : (
-                <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><span className="text-2xl">💸</span></div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">ไม่มีรายจ่าย</h3>
-                    <p className="text-gray-500 mb-4">ยังไม่มีรายจ่ายสำหรับโปรเจคนี้</p>
-                </div>
-            )}
-        </div>
-    );
-
-    const DocumentsTab = () => (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <p className="text-gray-600">เอกสารแนบจากรายรับและรายจ่าย <span className="font-bold text-gray-900">{allAttachments.length}</span> ไฟล์</p>
             </div>
-            {allAttachments.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {allAttachments.map((doc, idx) => (
-                        <div key={idx} className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center"><span className="text-lg">📄</span></div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">{typeof doc === 'string' ? doc : doc.name}</p>
-                                <p className="text-xs text-gray-500">จาก: {doc.sourceTitle || '-'}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><span className="text-2xl">📁</span></div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">ยังไม่มีเอกสาร</h3>
-                    <p className="text-gray-500">เอกสารจะแสดงเมื่อมีการแนบไฟล์ในรายรับหรือรายจ่าย</p>
-                </div>
-            )}
-        </div>
+        </>
     );
 
-    const ActivitiesTab = () => (
-        <div>
-            <p className="text-gray-600 mb-4">กิจกรรมล่าสุด <span className="font-bold text-gray-900">{activities.length}</span> รายการ</p>
-            {activities.length > 0 ? (
-                <div className="relative">
-                    <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-gray-200"></div>
-                    <div className="space-y-4">
-                        {activities.map((a, idx) => (
-                            <div key={a.id || idx} className="relative flex gap-4 pl-12">
-                                <div className="absolute left-3 w-5 h-5 bg-white rounded-full border-2 border-blue-400 flex items-center justify-center text-xs">{a.icon}</div>
-                                <div className="flex-1 bg-white rounded-lg border border-gray-200 p-4">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <span className="font-medium text-gray-900">{a.title}</span>
-                                        <span className="text-xs text-gray-400">{formatDate(a.timestamp)}</span>
-                                    </div>
-                                    <p className="text-sm text-gray-600">{a.description}</p>
-                                    <p className="text-xs text-gray-400 mt-1">โดย {a.user}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            ) : (
-                <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><span className="text-2xl">📋</span></div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">ไม่มีกิจกรรม</h3>
-                    <p className="text-gray-500">ยังไม่มีกิจกรรมสำหรับโปรเจคนี้</p>
-                </div>
-            )}
-        </div>
+    const ExpenseTab = () => (
+        <ExpenseListContent
+            expenses={projectExpenses}
+            onRefresh={fetchProjectData}
+            isLoading={isLoading}
+            projectCode={projectCode}
+        />
     );
+
 
     const renderTabContent = () => {
         switch (activeTab) {
-            case 'overview': return <OverviewTab />;
             case 'projectInfo': return <ProjectInfoTab />;
             case 'income': return <IncomeTab />;
             case 'expense': return <ExpenseTab />;
-            case 'documents': return <DocumentsTab />;
-            case 'activities': return <ActivitiesTab />;
-            default: return <OverviewTab />;
+            default: return <ProjectInfoTab />;
         }
     };
 
@@ -1043,12 +918,43 @@ const ProjectDetail = () => {
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">{renderTabContent()}</div>
 
-            <AddIncomeModal isOpen={isIncomeModalOpen} onClose={() => setIsIncomeModalOpen(false)} onSubmit={handleAddIncome} projectCode={projectCode} />
-            <AddExpenseModal isOpen={isExpenseModalOpen} onClose={() => setIsExpenseModalOpen(false)} onSubmit={handleAddExpense} projectCode={projectCode} />
-            <EditIncomeModal isOpen={isEditIncomeModalOpen} onClose={() => setIsEditIncomeModalOpen(false)} onSubmit={handleUpdateIncome} onDelete={handleDeleteIncomeLegacy} income={selectedIncome} />
-            <EditExpenseModal isOpen={isEditExpenseModalOpen} onClose={() => setIsEditExpenseModalOpen(false)} onSubmit={handleUpdateExpense} onDelete={handleDeleteExpenseLegacy} expense={selectedExpense} />
+            <IncomeModal
+                mode="add"
+                isOpen={isIncomeModalOpen}
+                onClose={() => setIsIncomeModalOpen(false)}
+                onSubmit={handleAddIncome}
+                projectCode={projectCode}
+            />
+
+            <ExpenseModal
+                mode="add"
+                isOpen={isExpenseModalOpen}
+                onClose={() => setIsExpenseModalOpen(false)}
+                onSubmit={handleAddExpense}
+                projectCode={projectCode}
+            />
+
+            <IncomeModal
+                mode="edit"
+                isOpen={isEditIncomeModalOpen}
+                onClose={() => setIsEditIncomeModalOpen(false)}
+                onSubmit={handleUpdateIncome}
+                onDelete={handleDeleteIncomeLegacy}
+                income={selectedIncome}
+                projectCode={projectCode}
+            />
+
+            <ExpenseModal
+                mode="edit"
+                isOpen={isEditExpenseModalOpen}
+                onClose={() => setIsEditExpenseModalOpen(false)}
+                onSubmit={handleUpdateExpense}
+                onDelete={handleDeleteExpenseLegacy}
+                expense={selectedExpense}
+                projectCode={projectCode}
+            />
+
             <ProjectModal mode="edit" isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} onSubmit={handleEditProject} project={project} />
-            <EditTeamMemberModal isOpen={isEditTeamModalOpen} onClose={() => setIsEditTeamModalOpen(false)} onSubmit={handleUpdateTeamMember} assignment={selectedTeamMember} />
             <ConfirmDeleteModal
                 isOpen={deleteModal.isOpen}
                 onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })}
@@ -1062,9 +968,14 @@ const ProjectDetail = () => {
                 itemCode={deleteModal.data?.projectCode || deleteModal.data?.account_code || (deleteModal.type === 'income' ? 'INC-' + deleteModal.data?.id : '')}
                 warningMessage={deleteModal.type === 'project' ? "ข้อมูลรายรับและรายจ่ายทั้งหมดจะถูกลบ" : "การดำเนินการนี้ไม่สามารถย้อนกลับได้"}
             />
-            <AddTeamMemberModal isOpen={isTeamMemberModalOpen} onClose={() => setIsTeamMemberModalOpen(false)} onSubmit={handleAddTeamMember} projectCode={projectCode} existingMemberIds={projectTeam.map(t => t.memberId)} />
-            <ViewAttachmentsModal isOpen={isAttachmentsModalOpen} onClose={() => setIsAttachmentsModalOpen(false)} attachments={selectedAttachments} />
-            <StatusChangeConfirmModal
+            {/* Attached Documents Modal */}
+            <FileRepository
+                isOpen={isAttachmentsModalOpen}
+                onClose={() => setIsAttachmentsModalOpen(false)}
+                documents={selectedAttachments}
+            />
+            {/* Transaction Status Confirm Modal */}
+            <TransactionStatusModal
                 isOpen={!!pendingStatusChange}
                 onClose={() => setPendingStatusChange(null)}
                 onConfirm={confirmStatusChange}

@@ -28,8 +28,8 @@ router.post('/members/:memberId/documents',
 
             const { doc_type } = req.body;
 
-            // Upload to Cloudinary and save to database
-            const doc = await uploadService.uploadMemberDocToCloudinary(
+            // Upload to Local Storage and save to database
+            const doc = await uploadService.uploadMemberDocToLocal(
                 req.params.memberId,
                 req.file,
                 doc_type || 'other'
@@ -78,8 +78,8 @@ router.post('/expenses/:expenseId/attachments',
                 return res.status(400).json({ error: 'No file uploaded' });
             }
 
-            // Upload to Cloudinary and save to database
-            const attachment = await uploadService.uploadExpenseAttachmentToCloudinary(
+            // Upload to Local Storage and save to database
+            const attachment = await uploadService.uploadExpenseAttachmentToLocal(
                 req.params.expenseId,
                 req.file
             );

@@ -59,17 +59,31 @@ export const formatBudget = (budget) => {
 
 /**
  * Format date to readable Thai format with CE Year
+ * Handles date-only strings (YYYY-MM-DD) without timezone shift
  * @param {string} dateString - Date string in ISO format
  * @param {object} options - Intl.DateTimeFormat options
  * @returns {string} Formatted date string
  */
 export const formatDateCE = (dateString, options = {}) => {
     if (!dateString) return '-';
+
+    // Handle date-only string (YYYY-MM-DD) strict check to avoid timezone shift
+    // Only apply manual parsing if strictly 10 chars (e.g., "2026-02-27"), not ISO with time
+    let date;
+    if (typeof dateString === 'string' && dateString.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        // Parse as local date to avoid timezone shift for pure date strings
+        const [year, month, day] = dateString.split('-').map(Number);
+        date = new Date(year, month - 1, day);
+    } else {
+        // For ISO strings (with T), standard Date parsing works correctly with local timezone
+        date = new Date(dateString);
+    }
+
     const defaultOptions = {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
         calendar: 'gregory'
     };
-    return new Date(dateString).toLocaleDateString('th-TH', { ...defaultOptions, ...options });
+    return date.toLocaleDateString('th-TH', { ...defaultOptions, ...options });
 };

@@ -1,157 +1,250 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
-import { useClickOutside } from '../../hooks/useClickOutside';
 
 /**
  * Unified Dropdown Component
- * Supports multiple variants for different use cases
+ * Single source of truth for all dropdown styling
  * 
  * @param {Object} props
- * @param {string} props.variant - 'minimal' (for filters) | 'form' (for form inputs)
- * @param {string} props.label - Label text (displayed inline for minimal, above for form)
+ * @param {string} props.label - Label text
  * @param {string} props.value - Current selected value
- * @param {Array} props.options - Array of {value, label} objects or simple strings
+ * @param {Array} props.options - Array of {value, label} or strings
  * @param {Function} props.onChange - Callback with selected value
- * @param {string} props.placeholder - Placeholder text when no value selected
- * @param {boolean} props.hasError - Show error state (form variant only)
- * @param {string} props.colorTheme - 'blue' | 'green' | 'red' (default: 'blue')
- * @param {string} props.allLabel - Label for 'all' option (minimal variant only)
- * @param {boolean} props.showAllOption - Whether to show 'all' option (minimal variant only)
+ * @param {string} props.placeholder - Placeholder text
+ * @param {boolean} props.hasError - Show error state
+ * @param {boolean} props.disabled - Disable the dropdown
+ * 
+ * Size Props (flexible sizing):
+ * @param {string} props.width - Button width: 'auto', 'full', or CSS value like '200px'
+ * @param {string} props.minWidth - Minimum width for button (default: '80px')
+ * @param {string} props.maxWidth - Maximum width for button (optional)
+ * @param {string} props.listWidth - Dropdown list width: 'auto', 'match', or CSS value (default: 'match')
+ * @param {string} props.listMinWidth - Minimum width for list (default: '150px')
+ * @param {string} props.listMaxWidth - Maximum width for list (optional)
+ * 
+ * @param {boolean} props.showAllOption - Show "All" option at top
+ * @param {string} props.allLabel - Label for all option (default: 'ทั้งหมด')
+ * @param {boolean} props.inline - Show label inline with button (like filters)
  */
 const Dropdown = ({
-    variant = 'form',
     label,
     value,
     options = [],
     onChange,
     placeholder = 'เลือก...',
     hasError = false,
-    colorTheme = 'blue',
+    disabled = false,
+    // Size props
+    width = 'auto',
+    minWidth = '80px',
+    maxWidth,
+    listWidth = 'auto',
+    listMinWidth = '150px',
+    listMaxWidth = '350px',
+    // Features
+    showAllOption = false,
     allLabel = 'ทั้งหมด',
-    showAllOption = true
+    inline = false
 }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef(null);
+    const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
+    const buttonRef = useRef(null);
+    const listRef = useRef(null);
+    const [dropdownId] = useState(() => 'dropdown-' + Math.random().toString(36).substr(2, 9));
 
-    // Use custom hook for click outside detection
-    useClickOutside(dropdownRef, () => setIsOpen(false), isOpen);
-
-    // Normalize options to {value, label} format
+    // Normalize options to {value, label}
     const normalizedOptions = options.map(opt =>
         typeof opt === 'string' ? { value: opt, label: opt } : opt
     );
 
-    // Find current display label
-    const currentOption = normalizedOptions.find(opt => opt.value === value);
+    // Find current option
+    const currentOption = value === 'all'
+        ? { value: 'all', label: allLabel }
+        : normalizedOptions.find(opt => opt.value === value);
 
-    // Theme colors for selected item
-    const themeColors = {
-        blue: 'bg-blue-600',
-        green: 'bg-green-600',
-        red: 'bg-red-600',
+    // Close on outside click
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (buttonRef.current?.contains(e.target)) return;
+            if (listRef.current?.contains(e.target)) return;
+            setIsOpen(false);
+        };
+
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') setIsOpen(false);
+        };
+
+        const handleScroll = (e) => {
+            // Don't close if scrolling inside the dropdown list
+            if (listRef.current?.contains(e.target)) return;
+            setIsOpen(false);
+        };
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('keydown', handleEscape);
+            window.addEventListener('scroll', handleScroll, true);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleEscape);
+            window.removeEventListener('scroll', handleScroll, true);
+        };
+    }, [isOpen]);
+
+    // Calculate position for portal
+    useEffect(() => {
+        if (isOpen && buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect();
+            const itemHeight = 40;
+            const totalItems = normalizedOptions.length + (showAllOption ? 1 : 0);
+            const dropdownHeight = Math.min(totalItems * itemHeight + 16, 280);
+            const spaceBelow = window.innerHeight - rect.bottom;
+
+            setPosition({
+                top: spaceBelow >= dropdownHeight ? rect.bottom + 8 : rect.top - dropdownHeight - 8,
+                left: rect.left,
+                width: rect.width,
+                buttonWidth: rect.width // Store button width for list matching
+            });
+        }
+    }, [isOpen, normalizedOptions.length, showAllOption]);
+
+    // Handle selection
+    const handleSelect = (optValue) => {
+        onChange(optValue);
+        setIsOpen(false);
     };
 
-    // ========== MINIMAL VARIANT ==========
-    if (variant === 'minimal') {
-        const displayValue = value === 'all' ? allLabel : (currentOption?.label || value);
+    // Calculate button style
+    const getButtonStyle = () => {
+        const style = {};
+        if (width !== 'auto' && width !== 'full') {
+            style.width = width;
+        }
+        if (minWidth) style.minWidth = minWidth;
+        if (maxWidth) style.maxWidth = maxWidth;
+        return style;
+    };
 
+    // Calculate list style
+    const getListStyle = () => {
+        const style = {
+            top: position.top,
+            left: position.left
+        };
+
+        if (listWidth === 'match') {
+            style.width = position.buttonWidth;
+        } else if (listWidth !== 'auto') {
+            style.width = listWidth;
+        }
+
+        if (listMinWidth) style.minWidth = listMinWidth;
+        if (listMaxWidth) style.maxWidth = listMaxWidth;
+
+        return style;
+    };
+
+    // Dropdown list content
+    const renderList = () => (
+        <div
+            ref={listRef}
+            id={dropdownId}
+            className="fixed bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-[9999] max-h-[280px] overflow-y-auto"
+            style={getListStyle()}
+        >
+            {showAllOption && (
+                <button
+                    type="button"
+                    onClick={() => handleSelect('all')}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${value === 'all'
+                        ? 'bg-blue-500 text-white'
+                        : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
+                        }`}
+                >
+                    {allLabel}
+                </button>
+            )}
+            {normalizedOptions.map((option, index) => (
+                <button
+                    key={option.value ?? index}
+                    type="button"
+                    onClick={() => handleSelect(option.value)}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${value === option.value
+                        ? 'bg-blue-500 text-white'
+                        : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
+                        }`}
+                >
+                    {option.label}
+                </button>
+            ))}
+        </div>
+    );
+
+    const displayText = currentOption?.label || placeholder;
+    const hasValue = !!currentOption;
+
+    // Inline layout (label: [button])
+    if (inline) {
         return (
             <div className="flex items-center gap-2">
-                {label && <span className="text-sm text-gray-400">{label}:</span>}
-                <div className="relative" ref={dropdownRef}>
+                {label && <span className="text-sm text-gray-500 whitespace-nowrap">{label}:</span>}
+                <div className="relative">
                     <button
+                        ref={buttonRef}
                         type="button"
-                        onClick={() => setIsOpen(!isOpen)}
-                        className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-all ${isOpen
-                            ? 'text-gray-900 border-gray-400 bg-gray-50'
-                            : 'text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        onClick={() => !disabled && setIsOpen(!isOpen)}
+                        disabled={disabled}
+                        style={getButtonStyle()}
+                        className={`flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-lg border transition-all ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' :
+                            hasError ? 'border-red-400 bg-red-50' :
+                                isOpen ? 'border-blue-400 bg-blue-50/50 ring-2 ring-blue-100' :
+                                    'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
                             }`}
                     >
-                        <span className="font-medium">{displayValue}</span>
-                        <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                        <span className={`font-medium truncate ${hasValue ? 'text-gray-900' : 'text-gray-400'}`}>
+                            {displayText}
+                        </span>
+                        <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                     </button>
-
-                    {isOpen && (
-                        <div className="absolute top-full left-0 mt-1 min-w-[130px] bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50 overflow-hidden">
-                            {showAllOption && (
-                                <button
-                                    type="button"
-                                    onClick={() => { onChange('all'); setIsOpen(false); }}
-                                    className={`w-full text-left px-4 py-2 text-sm transition-colors ${value === 'all'
-                                        ? `${themeColors[colorTheme]} text-white`
-                                        : 'text-gray-700 hover:bg-gray-100'
-                                        }`}
-                                >
-                                    {allLabel}
-                                </button>
-                            )}
-                            {normalizedOptions.map((option, index) => (
-                                <button
-                                    key={option.value || index}
-                                    type="button"
-                                    onClick={() => { onChange(option.value); setIsOpen(false); }}
-                                    className={`w-full text-left px-4 py-2 text-sm transition-colors ${value === option.value
-                                        ? `${themeColors[colorTheme]} text-white`
-                                        : 'text-gray-700 hover:bg-gray-100'
-                                        }`}
-                                >
-                                    {option.label}
-                                </button>
-                            ))}
-                        </div>
-                    )}
+                    {isOpen && createPortal(renderList(), document.body)}
                 </div>
             </div>
         );
     }
 
-    // ========== FORM VARIANT (default) ==========
-    const displayLabel = currentOption ? currentOption.label : (value || placeholder);
-
+    // Standard layout (label above button)
     return (
-        <div className="w-full" ref={dropdownRef}>
+        <div className={width === 'full' ? 'w-full' : ''}>
             {label && (
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     {label}
                 </label>
             )}
             <div className="relative">
                 <button
+                    ref={buttonRef}
                     type="button"
-                    onClick={() => setIsOpen(!isOpen)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-lg border transition-all text-left ${hasError
-                        ? 'border-red-300 bg-red-50'
-                        : isOpen
-                            ? 'border-gray-400 bg-gray-50'
-                            : 'border-gray-200 hover:border-gray-300'
+                    onClick={() => !disabled && setIsOpen(!isOpen)}
+                    disabled={disabled}
+                    style={getButtonStyle()}
+                    className={`flex items-center justify-between gap-2 px-3 py-2.5 text-sm rounded-xl border transition-all ${width === 'full' ? 'w-full' : ''
+                        } ${disabled ? 'opacity-60 cursor-not-allowed bg-gray-100 border-gray-200' :
+                            hasError ? 'border-red-400 bg-red-50' :
+                                isOpen ? 'border-blue-400 bg-blue-50/30 ring-2 ring-blue-100' :
+                                    'border-gray-200 bg-white hover:border-gray-300'
                         }`}
                 >
-                    <span className={currentOption ? 'text-gray-900' : 'text-gray-400'}>
-                        {displayLabel}
+                    <span className={`truncate ${hasValue ? 'text-gray-900' : 'text-gray-400'}`}>
+                        {displayText}
                     </span>
-                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                    {!disabled && (
+                        <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                    )}
                 </button>
-
-                {isOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 max-h-60 overflow-y-auto">
-                        {normalizedOptions.map((option, index) => (
-                            <button
-                                key={option.value || index}
-                                type="button"
-                                onClick={() => {
-                                    onChange(option.value);
-                                    setIsOpen(false);
-                                }}
-                                className={`w-full text-left px-4 py-2 text-sm transition-colors ${value === option.value
-                                    ? `${themeColors[colorTheme]} text-white`
-                                    : 'text-gray-700 hover:bg-gray-100'
-                                    }`}
-                            >
-                                {option.label}
-                            </button>
-                        ))}
-                    </div>
-                )}
+                {isOpen && createPortal(renderList(), document.body)}
             </div>
         </div>
     );

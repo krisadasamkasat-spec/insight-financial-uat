@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Search, FolderKanban, CheckCircle, Banknote, Eye, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
-import MinimalDropdown from '../components/common/MinimalDropdown';
+import Dropdown from '../components/common/Dropdown';
 import ProjectModal from '../components/projects/ProjectModal';
 import ProjectStatusConfirmModal from '../components/projects/ProjectStatusConfirmModal';
 import StatusBadge from '../components/common/StatusBadge';
@@ -49,8 +49,8 @@ const Projects = () => {
                 const res = await projectAPI.getAllProjects();
                 const fetchedProjects = res.data.map(p => ({
                     projectCode: p.project_code,
-                    projectName: p.project_name,
-                    projectType: p.project_type,
+                    projectName: p.display_name || p.project_name || p.product_name, // Use display_name from service
+                    projectType: p.project_type_name || p.project_type_label || 'Other', // Use joined fields
                     status: p.status,
                     company: p.customer_name || p.client_name,
                     startDate: p.start_date,
@@ -176,8 +176,8 @@ const Projects = () => {
             .then(res => {
                 const fetchedProjects = res.data.map(p => ({
                     projectCode: p.project_code,
-                    projectName: p.project_name,
-                    projectType: p.project_type,
+                    projectName: p.display_name || p.project_name || p.product_name,
+                    projectType: p.project_type_name || p.project_type_label || 'Other',
                     status: p.status,
                     company: p.customer_name || p.client_name,
                     startDate: p.start_date,
@@ -358,11 +358,15 @@ const Projects = () => {
                         {/* Filters */}
                         <div className="flex items-center gap-4">
                             {/* Type Filter */}
-                            <MinimalDropdown
+                            <Dropdown
+                                inline
+                                showAllOption
                                 label="หมวดหมู่"
                                 value={typeFilter}
                                 options={projectTypes}
                                 onChange={setTypeFilter}
+                                minWidth="100px"
+                                listMinWidth="150px"
                             />
 
                             {/* Clear Filters */}

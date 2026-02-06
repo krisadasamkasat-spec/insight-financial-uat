@@ -145,4 +145,32 @@ router.delete('/:project_code/team/:member_id', async (req, res) => {
     }
 });
 
+// DELETE /api/projects/dates/:date_id
+// Delete a specific project date entry
+router.delete('/dates/:date_id', async (req, res) => {
+    try {
+        const { date_id } = req.params;
+        console.log(`🗑️ API Delete Request for Date ID: ${date_id}`);
+        const id = parseInt(date_id); // Ensure integer
+
+        if (isNaN(id)) {
+            console.log('❌ Invalid ID format');
+            return res.status(400).json({ error: 'Invalid ID format' });
+        }
+
+        const success = await projectService.deleteProjectDate(id);
+        console.log(`🗑️ Delete result for ID ${id}: ${success ? 'Success' : 'Failed/Not Found'}`);
+
+        if (!success) {
+            return res.status(404).json({ error: 'Date entry not found' });
+        }
+
+        res.json({ message: 'Date deleted successfully' });
+    } catch (err) {
+        console.error('Error deleting project date:', err);
+        res.status(500).json({ error: 'Failed to delete date' });
+    }
+});
+
 module.exports = router;
+

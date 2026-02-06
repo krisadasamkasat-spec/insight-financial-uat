@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar } from 'lucide-react';
 import CalendarHub from '../finance/CalendarHub';
+import { formatDateCE } from '../../utils/formatters';
 
 /**
  * Date Picker component using CalendarHub with Portal for overflow safety
@@ -23,12 +24,8 @@ const DatePicker = ({
     // Format date for display
     const formatDisplayDate = (dateStr) => {
         if (!dateStr) return '';
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('en-US', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric'
-        });
+        // Use common formatter for Thai Date with CE Year (e.g., 1 ก.พ. 2026)
+        return formatDateCE(dateStr);
     };
 
     // Calculate position
@@ -95,8 +92,19 @@ const DatePicker = ({
         setIsOpen(false);
     };
 
-    const selectedDate = value ? new Date(value) : null;
-    const minDateObj = minDate ? new Date(minDate) : null;
+    // Parse date string as local date to avoid timezone shift
+    const parseLocalDate = (dateStr) => {
+        if (!dateStr) return null;
+        // Handle YYYY-MM-DD format
+        const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+            return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+        }
+        return new Date(dateStr);
+    };
+
+    const selectedDate = parseLocalDate(value);
+    const minDateObj = parseLocalDate(minDate);
 
     return (
         <div className="w-full">

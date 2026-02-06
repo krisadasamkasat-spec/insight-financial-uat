@@ -30,15 +30,18 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/products', require('./routes/products'));
-app.use('/api/members', require('./routes/members'));
 app.use('/api/projects', require('./routes/projects'));
 app.use('/api/incomes', require('./routes/incomes'));
 app.use('/api/expenses', require('./routes/expenses'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/reports', require('./routes/reports'));
+app.use('/api/auth', require('./routes/auth'));
 app.use('/api/accounts', require('./routes/accounts'));
 app.use('/api/common', require('./routes/common'));
 app.use('/api/uploads', require('./routes/uploads'));
+app.use('/api/calendar', require('./routes/calendar'));
+app.use('/api/contacts', require('./routes/contacts'));
+app.use('/api/account-codes', require('./routes/accountCodes'));
 
 // Health check endpoint
 app.get('/', (req, res) => {

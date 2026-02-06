@@ -1,17 +1,25 @@
 import React, { useState, useMemo } from 'react';
-import CalendarHub from './CalendarHub';
-import ProjectDetails from '../projects/ProjectInfo';
+import { HandCoins, FileUser } from 'lucide-react';
+import ProjectInfo from '../projects/ProjectInfo';
 import FileRepository from '../common/FileRepository';
+import AttachmentPreview from '../common/AttachmentPreview';
+import PaymentCycleModal from './PaymentCycleModal';
+import { useSettings } from '../../contexts/SettingsContext';
 
 const MONTHS = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
 ];
 
-import { useSettings } from '../../contexts/SettingsContext';
-
-const ExpenseCard = ({ data, project, isSelected, onToggle, onPaymentCycleChange }) => {
-
+const PaymentCycleExpenseCard = ({
+    data,
+    project,
+    isSelected,
+    onToggle,
+    onPaymentCycleChange,
+    onReject,  // NEW: callback for rejection
+    isSelectionEnabled = true
+}) => {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [showProjectDetails, setShowProjectDetails] = useState(false);
     const [showDocuments, setShowDocuments] = useState(false);
@@ -20,9 +28,10 @@ const ExpenseCard = ({ data, project, isSelected, onToggle, onPaymentCycleChange
     const { getStatusColorClasses } = useSettings();
 
     const {
+        id,
         projectCode,
         expenseCode,
-        projectType,
+        expenseCategory,
         title,
         description,
         status,
@@ -31,8 +40,9 @@ const ExpenseCard = ({ data, project, isSelected, onToggle, onPaymentCycleChange
         paymentDate,
         netAmount,
         priceAmount,
-        vat,
-        wht,
+        vatAmount,
+        whtAmount,
+        createdAt,
         // New fields
         category_type,
         peak_status,
@@ -42,12 +52,9 @@ const ExpenseCard = ({ data, project, isSelected, onToggle, onPaymentCycleChange
 
     // Derived values
     const statusColors = getStatusColorClasses(status);
-    const company = data.company || project?.company || "บริษัทคอมมอนกราวด์ ประเทศไทย จำกัด"; // Use project company if available
+    const company = project?.customerName || project?.customer_name || "บริษัทคอมมอนกราวด์ ประเทศไทย จำกัด";
 
-    // Use project data passed from parent
-    // const project = useMemo(() => getProjectByCode(projectCode), [projectCode]); // Removed mock
-
-    // Get team members - assuming project.teamMembers is available
+    // Get team members from project
     const teamMembers = useMemo(() => {
         if (!project?.teamMembers) return [];
         return project.teamMembers.map(t => ({
@@ -57,10 +64,12 @@ const ExpenseCard = ({ data, project, isSelected, onToggle, onPaymentCycleChange
     }, [project]);
 
     const formatNumber = (num) => {
+        if (num === undefined || num === null || isNaN(num)) return '0.00';
         return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
 
     const formatDate = (dateString) => {
+        if (!dateString) return '-';
         const date = new Date(dateString);
         return date.toLocaleDateString('en-GB', {
             year: 'numeric',
@@ -76,14 +85,20 @@ const ExpenseCard = ({ data, project, isSelected, onToggle, onPaymentCycleChange
         return `${y}-${m}-${d}`;
     };
 
-    const handleOpenPaymentModal = () => {
+    const handleOpenPaymentModal = (e) => {
+        e.stopPropagation();
         setShowPaymentModal(true);
-        setSelectedDate(null);
+        // Initialize with current payment date or default to null
+        if (paymentDate) {
+            setSelectedDate(new Date(paymentDate));
+        } else {
+            setSelectedDate(null);
+        }
     };
 
     const handleConfirmPaymentChange = () => {
         if (selectedDate && onPaymentCycleChange) {
-            onPaymentCycleChange(data.id, formatDateKey(selectedDate));
+            onPaymentCycleChange(id, formatDateKey(selectedDate));
         }
         setShowPaymentModal(false);
         setSelectedDate(null);
@@ -91,240 +106,205 @@ const ExpenseCard = ({ data, project, isSelected, onToggle, onPaymentCycleChange
 
     return (
         <>
-            <div className={`flex justify-between bg-white p-5 font-sans transition-colors duration-200 hover:bg-gray-50 ${isSelected ? 'bg-blue-50/50' : ''}`}>
-                <div className="flex gap-4 flex-1">
-                    <div className="pt-0.5">
-                        <input
-                            type="checkbox"
-                            checked={isSelected || false}
-                            onChange={onToggle}
-                            className="w-4 h-4 rounded border-gray-300 cursor-pointer accent-blue-500"
-                        />
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        {/* Project Code & Title & Type */}
-                        <div className="flex items-center gap-2 text-sm">
-                            <button
-                                onClick={() => setShowProjectDetails(true)}
-                                className="font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors cursor-pointer"
-                            >
-                                {projectCode}
-                            </button>
-                            <span className="text-gray-300">|</span>
-                            <span className="font-medium text-gray-900">{expenseCode}</span>
-                            {category_type && (
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${category_type === 'วางบิล' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>
-                                    {category_type}
-                                </span>
-                            )}
-                            <span className="text-gray-500 truncate max-w-[200px]">{title}</span>
+
+            <div className={`flex justify-between bg-white p-5 font-sans transition-colors duration-200 hover:bg-gray-50 border-b border-gray-100 ${isSelected ? 'bg-blue-50/50' : ''}`}>
+                <div className="flex gap-4 w-[65%]">
+                    {/* Checkbox */}
+                    {isSelectionEnabled && (
+                        <div className="pt-1">
+                            <input
+                                type="checkbox"
+                                checked={isSelected || false}
+                                onChange={onToggle}
+                                className="w-5 h-5 rounded border-gray-300 cursor-pointer accent-blue-600 transition-all hover:scale-105"
+                            />
                         </div>
+                    )}
 
-                        {/* Description */}
-                        <div className="text-gray-400 text-xs truncate max-w-md">{description}</div>
-
-                        {/* Status Row */}
-                        <div className="flex items-center gap-2 mt-1">
-                            <span className={`px-2.5 py-0.5 rounded text-xs font-medium ${statusColors.bg} ${statusColors.text}`}>
-                                {status}
-                            </span>
-
-                            {peak_status && (
-                                <span className={`px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1 ${peak_status === 'Error' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'}`}>
-                                    <div className={`w-1.5 h-1.5 rounded-full ${peak_status === 'Error' ? 'bg-red-500' : 'bg-green-500'}`}></div>
-                                    {peak_status}
+                    {/* Left Content Column */}
+                    <div className="flex flex-col gap-[16px] flex-1 min-w-0">
+                        {/* BLACK BOX GROUP: Top Row + Description (Gap 4px) */}
+                        <div className="flex flex-col gap-[4px]">
+                            {/* Row 1: Project Code | Expense Code | Account Title */}
+                            {/* Header: font-size 16px, color #202224. Project Code (Bold), Expense Code (Normal), Account Title (Normal) */}
+                            <div className="flex items-center gap-2 flex-wrap text-[16px] text-[#202224]">
+                                <button
+                                    onClick={() => setShowProjectDetails(true)}
+                                    className="font-bold underline hover:text-gray-700 transition-colors cursor-pointer"
+                                >
+                                    {projectCode}
+                                </button>
+                                <span className="text-[#202224]">|</span>
+                                <span className="font-normal">
+                                    {expenseCode}
                                 </span>
-                            )}
+                                <span className="text-[#202224]">|</span>
+                                <span className="font-normal truncate max-w-[250px]" title={data.account_title}>
+                                    {data.account_title || '-'}
+                                </span>
+                            </div>
 
-                            <div className="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded ml-2">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
-                                    <line x1="12" y1="2" x2="12" y2="22"></line>
-                                </svg>
-                                {company}
+                            {/* Row 2: Description */}
+                            {/* Description: font-size 12px, normal, color #A0AEC0 */}
+                            <div className="text-[12px] font-normal text-[#A0AEC0] line-clamp-1" title={description}>
+                                {description || '-'}
+                                {project?.projectName && (
+                                    <>
+                                        <span className="ml-1">{project.projectName}</span>
+                                        {project.startDate && (
+                                            <span className="ml-1">
+                                                {new Date(project.startDate).toISOString().split('T')[0]}
+                                            </span>
+                                        )}
+                                    </>
+                                )}
                             </div>
                         </div>
 
-                        {/* Recipient / Names Context */}
-                        <div className="flex flex-col gap-1 mt-1">
-                            {/* Primary Payee */}
-                            <div className="flex items-center gap-2 text-xs text-gray-600">
+                        {/* RED BOX GROUP: Status Row + Contact Row (Gap 8px) */}
+                        <div className="flex flex-col gap-[8px]">
+                            {/* Row 3: Type Badge + Payback To/Store */}
+                            {/* Badge Row: font-size 12px, color #202224, normal */}
+                            <div className="flex items-center gap-[8px]">
                                 {category_type === 'สำรองจ่าย' ? (
                                     <>
-                                        <span className="font-semibold text-gray-500 w-20">Payback To:</span>
-                                        <span className="font-medium text-gray-800">{payback_name || '-'}</span>
+                                        <span className="px-3 py-0.5 rounded-full text-[12px] font-medium bg-[#4285F4] text-white">
+                                            สำรองจ่าย
+                                        </span>
+                                        <div className="flex items-center gap-[8px] text-[12px] text-[#202224] font-normal">
+                                            <HandCoins className="w-6 h-6 text-[#202224]" strokeWidth={1.5} />
+                                            {data.payback_to || payback_name || '-'}
+                                        </div>
                                     </>
                                 ) : (
                                     <>
-                                        <span className="font-semibold text-gray-500 w-20">Bill Name:</span>
-                                        <span className="font-medium text-gray-800">{recipient || '-'}</span>
+                                        <span className="px-3 py-0.5 rounded-full text-[12px] font-medium bg-[#00C4B4] text-white">
+                                            วางบิล
+                                        </span>
+                                        <div className="flex items-center gap-[8px] text-[12px] text-[#202224] font-normal">
+                                            <HandCoins className="w-6 h-6 text-[#202224]" strokeWidth={1.5} />
+                                            {vendor_name || data.contact || '-'}
+                                        </div>
                                     </>
                                 )}
                             </div>
 
-                            {/* Secondary Info */}
-                            <div className="flex items-center gap-2 text-xs text-gray-500">
-                                {category_type === 'สำรองจ่าย' ? (
-                                    <>
-                                        <span className="w-20">Store/Bill:</span>
-                                        <span>{recipient || '-'}</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <span className="w-20">Contact:</span>
-                                        <span>{vendor_name || '-'}</span>
-                                    </>
-                                )}
+                            {/* Row 4: Bill Header / Recipient */}
+                            {/* User Icon Row: font-size 12px, color #202224. Contact (Bold), Bill Header (Normal) */}
+                            <div className="flex items-center gap-[8px] text-[12px] text-[#202224] pl-0.5">
+                                <FileUser className="w-6 h-6 text-[#202224]" strokeWidth={1.5} />
+                                <span className="truncate max-w-[300px]" title={`${data.contact || ''} (${data.bill_header || ''})`}>
+                                    <span className="font-bold">{data.contact || '-'}</span>
+                                    {data.bill_header && <span className="font-normal"> ({data.bill_header})</span>}
+                                </span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Right Side - Amounts & Menu */}
-                <div className="flex items-start gap-3">
-                    <div className="flex flex-col gap-1 min-w-[140px] text-right">
-                        <div className="flex justify-between text-sm">
-                            <span className="text-gray-400">Net</span>
-                            <span className="text-red-500 font-bold">{formatNumber(netAmount)}</span>
+                <div className="flex items-stretch gap-4 w-[35%] justify-end">
+                    {/* Financials Column - Using flex, all right-aligned */}
+                    <div className="flex flex-col gap-[8px]">
+                        {/* Net Amount */}
+                        <div className="flex justify-end gap-4">
+                            <span className="text-[16px] text-[#202224] text-right whitespace-nowrap">Net</span>
+                            <span className="text-[16px] text-[#FF5757] font-bold text-right w-[120px] whitespace-nowrap">{formatNumber(netAmount)}</span>
                         </div>
-                        <div className="flex justify-between text-xs">
-                            <span className="text-gray-400">Price</span>
-                            <span className="text-gray-600">{formatNumber(priceAmount)}</span>
+
+                        {/* Price */}
+                        <div className="flex justify-end gap-4">
+                            <span className="text-[16px] text-[#202224] text-right whitespace-nowrap">Price</span>
+                            <span className="text-[16px] text-[#202224] font-medium text-right w-[120px] whitespace-nowrap">{formatNumber(priceAmount)}</span>
                         </div>
-                        <div className="flex justify-between text-xs">
-                            <span className="text-gray-400">VAT</span>
-                            <span className="text-gray-600">{vat}%</span>
+
+                        {/* VAT */}
+                        <div className="flex justify-end gap-4">
+                            <span className="text-[16px] text-[#202224] text-right whitespace-nowrap">VAT</span>
+                            <span className="text-[16px] text-[#202224] text-right w-[120px] whitespace-nowrap">
+                                {(vatAmount && vatAmount > 0) ? `7% (${formatNumber(vatAmount)})` : 'N/A'}
+                            </span>
                         </div>
-                        <div className="flex justify-between text-xs">
-                            <span className="text-gray-400">หัก ณ ที่จ่าย</span>
-                            <span className="text-gray-600">{formatNumber(wht)}</span>
+
+                        {/* WHT */}
+                        <div className="flex justify-end gap-4">
+                            <span className="text-[16px] text-[#202224] text-right whitespace-nowrap">หัก ณ ที่จ่าย</span>
+                            <span className="text-[16px] text-[#202224] text-right w-[120px] whitespace-nowrap">
+                                {(whtAmount && whtAmount > 0) ? formatNumber(whtAmount) : 'N/A'}
+                            </span>
                         </div>
-                        {/* Issue Date */}
-                        <div className="text-[10px] text-gray-300 mt-1">Issue Date: {formatDate(issueDate)}</div>
                     </div>
 
-                    {/* Action Icons */}
-                    <div className="flex flex-col items-center gap-1">
-                        {/* Documents Icon */}
-                        <button
-                            onClick={() => setShowDocuments(true)}
-                            className={`p-1.5 rounded-full transition-colors ${data.attachments?.length > 0 ? 'hover:bg-blue-50 text-blue-500' : 'hover:bg-gray-100 text-gray-400'}`}
-                            title="รายการเอกสารแนบ"
-                        >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14 2 14 8 20 8"></polyline>
-                            </svg>
-                        </button>
+                    {/* Actions Column - Icons vertical (column) */}
+                    <div className="flex flex-col items-center justify-start border-l border-gray-100 pl-1 gap-0.5">
+                        {/* 1. Reject Icon (NEW) */}
+                        {isSelectionEnabled && onReject && (
+                            <button
+                                onClick={() => onReject(data)}
+                                className="p-1 hover:bg-red-50 rounded transition-colors text-gray-400 hover:text-red-500"
+                                title="ไม่อนุมัติรายการนี้"
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                                </svg>
+                            </button>
+                        )}
 
-                        {/* Payment Cycle Change Icon */}
-                        <button
-                            onClick={handleOpenPaymentModal}
-                            className="p-1.5 hover:bg-amber-50 rounded-full transition-colors text-gray-400 hover:text-amber-500 group relative"
-                            title="เปลี่ยนแปลงรอบเบิกจ่าย"
-                        >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                <line x1="16" y1="2" x2="16" y2="6"></line>
-                                <line x1="8" y1="2" x2="8" y2="6"></line>
-                                <line x1="3" y1="10" x2="21" y2="10"></line>
-                            </svg>
-                        </button>
+                        {/* 2. Calendar Icon */}
+                        {isSelectionEnabled && (
+                            <button
+                                onClick={handleOpenPaymentModal}
+                                className="p-1 hover:bg-amber-50 rounded transition-colors text-gray-400 hover:text-amber-500"
+                                title="เปลี่ยนแปลงรอบเบิกจ่าย"
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                            </button>
+                        )}
+
+                        {/* 3. Documents Icon */}
+                        <div className="p-1">
+                            <AttachmentPreview
+                                attachments={data.attachments || []}
+                                onOpenModal={() => setShowDocuments(true)}
+                                size="sm"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Payment Cycle Change Modal with Calendar */}
-            {showPaymentModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    {/* Backdrop */}
-                    <div
-                        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-                        onClick={() => setShowPaymentModal(false)}
-                    />
-
-                    {/* Modal Content */}
-                    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-                        {/* Header with Gradient */}
-                        <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 p-5 border-b border-amber-100/50">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-11 h-11 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center shadow-md">
-                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                            <line x1="16" y1="2" x2="16" y2="6"></line>
-                                            <line x1="8" y1="2" x2="8" y2="6"></line>
-                                            <line x1="3" y1="10" x2="21" y2="10"></line>
-                                        </svg>
-                                    </div>
-                                    <h3 className="text-lg font-bold text-gray-800">เปลี่ยนแปลงรอบเบิกจ่าย</h3>
-                                </div>
-                                <button
-                                    onClick={() => setShowPaymentModal(false)}
-                                    className="p-2 hover:bg-white/70 rounded-full transition-colors text-gray-400 hover:text-gray-600"
-                                >
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Body - Calendar */}
-                        <div className="p-5 pt-4">
-                            {/* Project Info as Label */}
-                            <div className="text-sm font-semibold text-amber-600 mb-4 pb-3 border-b border-gray-100">
-                                {projectCode} | {expenseCode} {projectType} {title}
-                            </div>
-
-                            {/* Use reusable Calendar component */}
-                            <CalendarHub
-                                selectedDate={selectedDate}
-                                onDateSelect={setSelectedDate}
-                                disablePast={true}
-                                initialMonth={paymentDate ? new Date(paymentDate) : null}
-                                size="md"
-                                colorTheme="amber"
-                            />
-
-                            {/* Selected Date Display */}
-                            {selectedDate && (
-                                <div className="mt-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200/50 text-center">
-                                    <span className="text-base font-bold text-amber-700">
-                                        วันที่เลือก {selectedDate.getDate()} {MONTHS[selectedDate.getMonth()]} {selectedDate.getFullYear()}
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Footer */}
-                        <div className="p-5 pt-2">
-                            <button
-                                onClick={handleConfirmPaymentChange}
-                                disabled={!selectedDate}
-                                className={`w-full py-3.5 rounded-xl text-sm font-semibold transition-all ${selectedDate
-                                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-500/30'
-                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                    }`}
-                            >
-                                ยืนยัน
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <PaymentCycleModal
+                isOpen={showPaymentModal}
+                onClose={() => setShowPaymentModal(false)}
+                onConfirm={handleConfirmPaymentChange}
+                selectedDate={selectedDate}
+                onDateSelect={setSelectedDate}
+                currentPaymentDate={paymentDate}
+                expenseInfo={{
+                    projectCode: projectCode,
+                    expenseCode: expenseCode,
+                    title: title
+                }}
+            />
 
             {/* Project Details Modal */}
-            <ProjectDetails
+            <ProjectInfo
                 isOpen={showProjectDetails}
                 onClose={() => setShowProjectDetails(false)}
                 projectData={{
                     projectCode: projectCode,
-                    projectName: project?.projectName || 'Unknown Project',
-                    projectType: project?.projectType || 'In-House',
-                    startDate: project?.startDate,
-                    endDate: project?.endDate,
+                    projectName: project?.projectName || project?.project_name || 'Unknown Project',
+                    projectType: project?.projectType || project?.project_type || 'In-House',
+                    startDate: project?.startDate || project?.start_date,
+                    endDate: project?.endDate || project?.end_date,
                     location: project?.location,
                     teamMembers: teamMembers
                 }}
@@ -335,10 +315,10 @@ const ExpenseCard = ({ data, project, isSelected, onToggle, onPaymentCycleChange
                 isOpen={showDocuments}
                 onClose={() => setShowDocuments(false)}
                 documents={data.attachments || []}
-                projectCode={data.projectCode}
+                projectCode={projectCode}
             />
         </>
     );
 };
 
-export default ExpenseCard;
+export default PaymentCycleExpenseCard;

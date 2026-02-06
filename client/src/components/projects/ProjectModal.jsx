@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../common/Modal';
-import FormDropdown from '../common/FormDropdown';
+import Dropdown from '../common/Dropdown';
 import DatePicker from '../common/DatePicker';
 
 import { projectAPI } from '../../services/api';
@@ -17,16 +17,16 @@ import { useSettings } from '../../contexts/SettingsContext';
  * @param {Object} props.project - Project data (edit mode)
  */
 
-const getTypeIcon = (type) => {
+const getTypeIcon = (type, sizeClass = "w-8 h-8") => {
     switch (type) {
-        case 'In-House': return <Users className="w-8 h-8 text-blue-500" />;
-        case 'Consult': return <Briefcase className="w-8 h-8 text-purple-500" />;
-        case 'Public': return <Globe className="w-8 h-8 text-green-500" />;
-        case 'Central': return <Landmark className="w-8 h-8 text-gray-500" />;
-        case 'MORE': return <Layers className="w-8 h-8 text-yellow-500" />;
-        case 'Salevity': return <TrendingUp className="w-8 h-8 text-red-500" />;
-        case 'TMT': return <GraduationCap className="w-8 h-8 text-indigo-500" />;
-        default: return <Folder className="w-8 h-8 text-gray-500" />;
+        case 'In-House': return <Users className={`${sizeClass} text-blue-500`} />;
+        case 'Consult': return <Briefcase className={`${sizeClass} text-purple-500`} />;
+        case 'Public': return <Globe className={`${sizeClass} text-green-500`} />;
+        case 'Central': return <Landmark className={`${sizeClass} text-gray-500`} />;
+        case 'MORE': return <Layers className={`${sizeClass} text-yellow-500`} />;
+        case 'Salevity': return <TrendingUp className={`${sizeClass} text-red-500`} />;
+        case 'TMT': return <GraduationCap className={`${sizeClass} text-indigo-500`} />;
+        default: return <Folder className={`${sizeClass} text-gray-500`} />;
     }
 };
 
@@ -111,19 +111,11 @@ const ProjectModal = ({
     // Auto-generate project code (Add mode only, when step 2 active)
     useEffect(() => {
         if (!isEditMode && formData.projectType && isOpen && step === 2) {
-            let prefix = 'OTHER';
-            switch (formData.projectType) {
-                case 'In-House': prefix = 'INHOUSE'; break;
-                case 'Public': prefix = 'PUBLIC'; break;
-                case 'Consult': prefix = 'CONSULT'; break;
-                case 'Central': prefix = 'CENTRAL'; break;
-                case 'MORE': prefix = 'MORE'; break;
-                case 'Salevity': prefix = 'SALE'; break;
-                case 'TMT': prefix = 'TMT'; break;
-                default: prefix = 'OTHER';
-            }
+            // Find selected type from Master Data
+            const selectedTypeObj = projectTypes.find(t => (t.value || t.name) === formData.projectType);
+            const prefix = selectedTypeObj?.code_prefix || 'OTHER';
 
-            // Filter real projects
+            // Filter real projects to find max existing code
             const existingCodes = projects
                 .filter(p => p.project_code && p.project_code.startsWith(prefix))
                 .map(p => {
@@ -278,9 +270,9 @@ const ProjectModal = ({
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">ประเภทโปรเจค</label>
-                    <div className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-gray-600">
-                        {getTypeIcon(formData.projectType)}
-                        <span className="text-sm font-medium">{projectTypeOptions.find(t => t.value === formData.projectType)?.label || formData.projectType}</span>
+                    <div className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 h-[42px]">
+                        {getTypeIcon(formData.projectType, "w-5 h-5")}
+                        <span className="text-sm font-medium truncate">{projectTypeOptions.find(t => t.value === formData.projectType)?.label || formData.projectType}</span>
                     </div>
                 </div>
 
@@ -326,7 +318,7 @@ const ProjectModal = ({
 
                 <div>
                     <DatePicker
-                        label="วันเริ่มต้น *"
+                        label={<>วันเริ่มต้น <span className="text-red-500">*</span></>}
                         value={formData.startDate}
                         onChange={(val) => handleFieldChange('startDate', val)}
                         hasError={!!errors.startDate}

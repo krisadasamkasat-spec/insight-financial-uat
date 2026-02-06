@@ -1,14 +1,17 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, CreditCard, BarChart3, Settings, Wallet } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, CreditCard, BarChart3, Settings, Wallet, CalendarDays, CheckCircle, Database } from 'lucide-react';
 
 const Sidebar = () => {
     const navItems = [
         { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
         { to: '/projects', icon: FolderKanban, label: 'Projects' },
+        { to: '/calendar', icon: CalendarDays, label: 'Calendar' },
         { to: '/expenses', icon: CreditCard, label: 'Expenses' },
-        { to: '/accounts', icon: Wallet, label: 'Accounts' },
+
+        { to: '/approval', icon: CheckCircle, label: 'Approval' },
         { to: '/reports', icon: BarChart3, label: 'Reports' },
+        { to: '/management', icon: Database, label: 'Management' },
         { to: '/settings', icon: Settings, label: 'Settings' },
     ];
 

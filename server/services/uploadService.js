@@ -1,10 +1,38 @@
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const db = require('../db');
-const cloudinary = require('../config/cloudinaryConfig');
 
-// Use memory storage for multer (files will be uploaded to Cloudinary)
-const memoryStorage = multer.memoryStorage();
+// Ensure upload directories exist
+const uploadDir = path.join(__dirname, '../uploads');
+const membersDir = path.join(uploadDir, 'members');
+const expensesDir = path.join(uploadDir, 'expenses');
+
+[uploadDir, membersDir, expensesDir].forEach(dir => {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+});
+
+// Configure Multer Disk Storage
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        let dest = uploadDir;
+        if (req.originalUrl.includes('members')) {
+            dest = membersDir;
+        } else if (req.originalUrl.includes('expenses')) {
+            dest = expensesDir;
+        }
+        cb(null, dest);
+    },
+    filename: (req, file, cb) => {
+        // Safe filename: timestamp-originalName
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname);
+        const name = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '_');
+        cb(null, name + '-' + uniqueSuffix + ext);
+    }
+});
 
 // File filter - allow common document types
 const fileFilter = (req, file, cb) => {
@@ -23,100 +51,18 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-// Multer instances for processing file uploads
+// Multer instances
 const uploadMemberDoc = multer({
-    storage: memoryStorage,
+    storage: storage,
     fileFilter,
     limits: { fileSize: 10 * 1024 * 1024 } // 10MB
 });
 
 const uploadExpenseAttachment = multer({
-    storage: memoryStorage,
+    storage: storage,
     fileFilter,
     limits: { fileSize: 10 * 1024 * 1024 } // 10MB
 });
-
-// ========================
-// CLOUDINARY UPLOAD HELPERS
-// ========================
-
-/**
- * Upload a file buffer to Cloudinary
- * @param {Buffer} fileBuffer - The file buffer from multer
- * @param {string} folder - Cloudinary folder path
- * @param {string} publicId - Optional public ID for the file
- * @returns {Promise<object>} Cloudinary upload result
- */
-const uploadToCloudinary = (fileBuffer, folder, publicId = null) => {
-    return new Promise((resolve, reject) => {
-        const uploadOptions = {
-            folder: folder,
-            resource_type: 'auto', // Automatically detect file type
-        };
-
-        if (publicId) {
-            uploadOptions.public_id = publicId;
-        }
-
-        const uploadStream = cloudinary.uploader.upload_stream(
-            uploadOptions,
-            (error, result) => {
-                if (error) {
-                    reject(error);
-                } else {
-                    resolve(result);
-                }
-            }
-        );
-
-        // Write buffer to stream
-        uploadStream.end(fileBuffer);
-    });
-};
-
-/**
- * Delete a file from Cloudinary
- * @param {string} publicId - The public ID of the file to delete
- * @returns {Promise<object>} Cloudinary deletion result
- */
-const deleteFromCloudinary = async (publicId) => {
-    try {
-        // Try as image first, then as raw (for PDFs, docs, etc.)
-        const result = await cloudinary.uploader.destroy(publicId);
-        if (result.result === 'not found') {
-            // Try with raw resource type
-            return await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
-        }
-        return result;
-    } catch (error) {
-        console.error('Error deleting from Cloudinary:', error);
-        throw error;
-    }
-};
-
-/**
- * Extract public ID from Cloudinary URL
- * @param {string} url - The Cloudinary URL
- * @returns {string} The public ID
- */
-const getPublicIdFromUrl = (url) => {
-    if (!url) return null;
-    // Example URL: https://res.cloudinary.com/dsxavre81/image/upload/v1234567890/folder/filename.jpg
-    try {
-        const urlParts = url.split('/upload/');
-        if (urlParts.length < 2) return null;
-
-        const pathPart = urlParts[1];
-        // Remove version number if present (v1234567890/)
-        const withoutVersion = pathPart.replace(/^v\d+\//, '');
-        // Remove file extension
-        const publicId = withoutVersion.replace(/\.[^/.]+$/, '');
-        return publicId;
-    } catch (error) {
-        console.error('Error extracting public ID:', error);
-        return null;
-    }
-};
 
 // ========================
 // MEMBER DOCUMENTS
@@ -140,35 +86,44 @@ const createMemberDocument = async (memberId, docType, fileName, filePath) => {
 };
 
 /**
- * Upload a member document to Cloudinary and save to database
- * @param {number} memberId - The member ID
- * @param {object} file - The multer file object
- * @param {string} docType - Document type
- * @returns {Promise<object>} The created document record
+ * Upload a member document to Local Storage and save to database
  */
-const uploadMemberDocToCloudinary = async (memberId, file, docType) => {
-    const folder = `insight-financial/members/${memberId}`;
-    const publicId = `${docType}_${Date.now()}`;
+const uploadMemberDocToLocal = async (memberId, file, docType) => {
+    // Construct public URL (relative path from server root or full URL if preferred)
+    // Assuming we serve uploads from /uploads route
+    // The file.path is the absolute path on disk, we need the web-accessible path
+    // Multer's file.filename gives us the saved name.
 
-    const result = await uploadToCloudinary(file.buffer, folder, publicId);
+    // We can restructure to subfolders per ID if needed, 
+    // but for simplicity with the single configured storage above, we are dumping into `membersDir`.
 
-    // Save to database with Cloudinary URL
+    const webPath = `/uploads/members/${file.filename}`;
+
     return await createMemberDocument(
         memberId,
         docType,
         file.originalname,
-        result.secure_url
+        webPath
     );
 };
 
 const deleteMemberDocument = async (docId) => {
-    // Get the document to find its Cloudinary URL
+    // Get the document to find its path
     const docResult = await db.query('SELECT * FROM member_documents WHERE id = $1', [docId]);
     if (docResult.rows.length > 0) {
         const doc = docResult.rows[0];
-        const publicId = getPublicIdFromUrl(doc.file_path);
-        if (publicId) {
-            await deleteFromCloudinary(publicId);
+
+        // Extract filename from web path to delete from disk
+        // path: /uploads/members/filename.ext
+        const filename = path.basename(doc.file_path);
+        const filePath = path.join(membersDir, filename);
+
+        if (fs.existsSync(filePath)) {
+            try {
+                fs.unlinkSync(filePath);
+            } catch (err) {
+                console.error(`Failed to delete local file: ${filePath}`, err);
+            }
         }
     }
 
@@ -206,22 +161,15 @@ const createExpenseAttachment = async (expenseId, fileName, filePath, source = '
 };
 
 /**
- * Upload an expense attachment to Cloudinary and save to database
- * @param {number} expenseId - The expense ID
- * @param {object} file - The multer file object
- * @returns {Promise<object>} The created attachment record
+ * Upload an expense attachment to Local Storage and save to database
  */
-const uploadExpenseAttachmentToCloudinary = async (expenseId, file) => {
-    const folder = `insight-financial/expenses/${expenseId}`;
-    const publicId = `attachment_${Date.now()}`;
+const uploadExpenseAttachmentToLocal = async (expenseId, file) => {
+    const webPath = `/uploads/expenses/${file.filename}`;
 
-    const result = await uploadToCloudinary(file.buffer, folder, publicId);
-
-    // Save to database with Cloudinary URL
     return await createExpenseAttachment(
         expenseId,
         file.originalname,
-        result.secure_url,
+        webPath,
         'upload'
     );
 };
@@ -236,15 +184,21 @@ const linkMemberDocToExpense = async (expenseId, memberDocId) => {
 };
 
 const deleteExpenseAttachment = async (attachmentId) => {
-    // Get the attachment to find its Cloudinary URL
+    // Get the attachment to find its path
     const attachResult = await db.query('SELECT * FROM expense_attachments WHERE id = $1', [attachmentId]);
     if (attachResult.rows.length > 0) {
         const attachment = attachResult.rows[0];
-        // Only delete from Cloudinary if it's an uploaded file (not linked from member docs)
+        // Only delete from disk if it's an uploaded file (not linked from member docs)
         if (attachment.source === 'upload') {
-            const publicId = getPublicIdFromUrl(attachment.file_path);
-            if (publicId) {
-                await deleteFromCloudinary(publicId);
+            const filename = path.basename(attachment.file_path);
+            const filePath = path.join(expensesDir, filename);
+
+            if (fs.existsSync(filePath)) {
+                try {
+                    fs.unlinkSync(filePath);
+                } catch (err) {
+                    console.error(`Failed to delete local file: ${filePath}`, err);
+                }
             }
         }
     }
@@ -262,13 +216,6 @@ module.exports = {
     uploadMemberDoc,
     uploadExpenseAttachment,
 
-    // Cloudinary upload functions
-    uploadToCloudinary,
-    deleteFromCloudinary,
-    getPublicIdFromUrl,
-    uploadMemberDocToCloudinary,
-    uploadExpenseAttachmentToCloudinary,
-
     // Database functions
     getMemberDocuments,
     createMemberDocument,
@@ -276,5 +223,13 @@ module.exports = {
     getExpenseAttachments,
     createExpenseAttachment,
     linkMemberDocToExpense,
-    deleteExpenseAttachment
+    deleteExpenseAttachment,
+
+    // New Local functions (replacing Cloudinary ones)
+    uploadMemberDocToLocal,
+    uploadExpenseAttachmentToLocal,
+
+    // Alias old names to new functions for compatibility if I miss updating a route
+    uploadMemberDocToCloudinary: uploadMemberDocToLocal,
+    uploadExpenseAttachmentToCloudinary: uploadExpenseAttachmentToLocal
 };

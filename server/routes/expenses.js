@@ -50,7 +50,14 @@ router.get('/project/:project_code', async (req, res) => {
 // POST new expense
 router.post('/', async (req, res) => {
     try {
-        const newExpense = await expenseService.createExpense(req.body);
+        const { linked_doc_ids, ...expenseData } = req.body;
+        const newExpense = await expenseService.createExpense(expenseData);
+
+        // Link contact documents if provided
+        if (linked_doc_ids && linked_doc_ids.length > 0) {
+            await expenseService.linkContactDocuments(newExpense.id, linked_doc_ids);
+        }
+
         res.status(201).json(newExpense);
     } catch (err) {
         console.error('Error creating expense:', err.message, err.detail, err.code);

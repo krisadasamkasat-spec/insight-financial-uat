@@ -1,0 +1,1941 @@
+{
+  "roles": [
+    {
+      "id": 1,
+      "name": "Trainer",
+      "label": "Trainer",
+      "created_at": "2025-12-19T16:42:49.602Z"
+    },
+    {
+      "id": 2,
+      "name": "Co-Trainer",
+      "label": "Co-Trainer",
+      "created_at": "2025-12-19T16:42:49.602Z"
+    },
+    {
+      "id": 3,
+      "name": "MC",
+      "label": "MC (Master of Ceremony)",
+      "created_at": "2025-12-19T16:42:49.602Z"
+    },
+    {
+      "id": 4,
+      "name": "TA",
+      "label": "Training Assistant (TA)",
+      "created_at": "2025-12-19T16:42:49.602Z"
+    },
+    {
+      "id": 5,
+      "name": "Coordinator",
+      "label": "Training Coordinator",
+      "created_at": "2025-12-19T16:42:49.602Z"
+    },
+    {
+      "id": 6,
+      "name": "TMT",
+      "label": "Training Management Team (TMT)",
+      "created_at": "2025-12-19T16:42:49.602Z"
+    }
+  ],
+  "project_types": [
+    {
+      "id": 1,
+      "value": "Consult",
+      "label": "Consult",
+      "created_at": "2025-12-19T16:42:49.602Z"
+    },
+    {
+      "id": 2,
+      "value": "In-House",
+      "label": "In-House",
+      "created_at": "2025-12-19T16:42:49.602Z"
+    },
+    {
+      "id": 3,
+      "value": "Public",
+      "label": "Public",
+      "created_at": "2025-12-19T16:42:49.602Z"
+    },
+    {
+      "id": 7,
+      "value": "Internal",
+      "label": "ส่วนกลาง",
+      "created_at": "2026-01-02T08:25:05.483Z"
+    },
+    {
+      "id": 8,
+      "value": "MORE",
+      "label": "MORE",
+      "created_at": "2026-01-02T08:25:05.483Z"
+    },
+    {
+      "id": 9,
+      "value": "Salevity",
+      "label": "Salevity",
+      "created_at": "2026-01-02T08:25:05.483Z"
+    },
+    {
+      "id": 10,
+      "value": "TMT",
+      "label": "TMT",
+      "created_at": "2026-01-02T08:25:05.483Z"
+    },
+    {
+      "id": 6,
+      "value": "AIM",
+      "label": "Automation",
+      "created_at": "2025-12-19T16:42:49.602Z"
+    },
+    {
+      "id": 4,
+      "value": "PR-Event",
+      "label": "PR-Event",
+      "created_at": "2025-12-19T16:42:49.602Z"
+    },
+    {
+      "id": 5,
+      "value": "CSR",
+      "label": "CSR",
+      "created_at": "2025-12-19T16:42:49.602Z"
+    },
+    {
+      "id": 11,
+      "value": "E-Learning",
+      "label": "E-Learning",
+      "created_at": "2026-01-02T08:45:55.113Z"
+    }
+  ],
+  "account_codes": [
+    {
+      "code": "510110",
+      "title": "ต้นทุนเทรนเนอร์ /Cost of Trainer"
+    },
+    {
+      "code": "510111",
+      "title": "ต้นทุน Co-Trainer /Cost of Co-Trainer"
+    },
+    {
+      "code": "510112",
+      "title": "ต้นทุน MC Cost of MC"
+    },
+    {
+      "code": "510113",
+      "title": "ต้นทุน TA /Cost of TA"
+    },
+    {
+      "code": "510114",
+      "title": "ต้นทุน Training Coordinator"
+    },
+    {
+      "code": "510115",
+      "title": "ต้นทุนทีม Light & Sound"
+    },
+    {
+      "code": "510116",
+      "title": "ต้นทุนเอกสารประกอบจัดอบรม /Cost of Training Document"
+    },
+    {
+      "code": "510117",
+      "title": "ต้นทุนอุปกรณ์แจกเพื่อส่วนหนึ่งอบรม /Cost of Training Others"
+    },
+    {
+      "code": "510118",
+      "title": "ต้นทุนของรางวัลในการอบรม /Prize or reward expenses"
+    },
+    {
+      "code": "510119",
+      "title": "ต้นทุนช่างภาพนิ่ง /Production Cost"
+    },
+    {
+      "code": "510120",
+      "title": "ต้นทุนช่างภาพวิดิโอ /Production VDO Cost"
+    },
+    {
+      "code": "510121",
+      "title": "ต้นทุนทีมถ่ายทำ / ตัดต่อ คอร์สออนไลน์"
+    },
+    {
+      "code": "510122",
+      "title": "ต้นทุนค่าสถานที่ / ห้องสัมมนา /Cost of Location"
+    },
+    {
+      "code": "510123",
+      "title": "ต้นทุนค่าอาหาร / กาแฟ วิทยากร /Cost of food (trainer)"
+    },
+    {
+      "code": "510124",
+      "title": "ต้นทุนค่าลิขสิทธ์หลักสูตร /Course license costs"
+    },
+    {
+      "code": "510125",
+      "title": "ต้นทุนค่าเดินทาง / ที่พัก /Transportation Cost"
+    },
+    {
+      "code": "510126",
+      "title": "ต้นทุน ส่งของหน้างาน วางบิล /Messenger"
+    },
+    {
+      "code": "510127",
+      "title": "ต้นทุนคอร์สออนไลน์ E-Learning /Platform E-Learning"
+    },
+    {
+      "code": "510128",
+      "title": "ต้นทุนอื่นๆ /Others"
+    },
+    {
+      "code": "510129",
+      "title": "ต้นทุน TMT"
+    },
+    {
+      "code": "520103",
+      "title": "เงินเดือน-พนักงานขาย /Sales Salary"
+    },
+    {
+      "code": "520104",
+      "title": "ค่านายหน้าพนักงาน /Sales commission"
+    },
+    {
+      "code": "520105",
+      "title": "โบนัส-พนักงานขาย /Bonus on sales"
+    },
+    {
+      "code": "520106",
+      "title": "Commission Partners"
+    },
+    {
+      "code": "520310",
+      "title": "ค่าโทรศัพท์พนักขาย /Sales communication expenses"
+    },
+    {
+      "code": "520311",
+      "title": "ค่าเดินทาง/ค่าพาหนะพนักงาน /Travel allowance expenses"
+    },
+    {
+      "code": "520312",
+      "title": "สวัสดิการพนักงานขายอื่น /Other sales staff welfare"
+    },
+    {
+      "code": "520219",
+      "title": "ค่าจ้างที่ปรึกษาการขาย /Sales consulting service expenses"
+    },
+    {
+      "code": "520220",
+      "title": "ค่าจ้างที่ปรึกษาการตลาด /Marketing consulting service expenses"
+    },
+    {
+      "code": "520221",
+      "title": "ค่าออกแบบและผลิตสื่อชิ้นงาน /Design cost"
+    },
+    {
+      "code": "520222",
+      "title": "ค่าออกบูธและทีมงานออกบูธ /Space rental and event related expenses"
+    },
+    {
+      "code": "520223",
+      "title": "BNI /Business Network International"
+    },
+    {
+      "code": "520224",
+      "title": "ค่าเขียน Content และ Graphic /Content Creating Cost"
+    },
+    {
+      "code": "520225",
+      "title": "ค่าจ้างทำเว็บ และ SEO /Website and SEO Cost"
+    },
+    {
+      "code": "520226",
+      "title": "ค่า Ads Facebook / Instagram"
+    },
+    {
+      "code": "520227",
+      "title": "ค่า Ads Google / Youtube"
+    },
+    {
+      "code": "520228",
+      "title": "ค่า Ads Tiktok"
+    },
+    {
+      "code": "520229",
+      "title": "ค่า LINE OA"
+    },
+    {
+      "code": "520230",
+      "title": "ค่า Marketing Social Media /Advertising media production cost"
+    },
+    {
+      "code": "520313",
+      "title": "ค่าของขวัญตามเทศกาลให้ลูกค้า /Cost of gifts"
+    },
+    {
+      "code": "520314",
+      "title": "ค่าเลี้ยงรับรองลูกค้า /Entertainment and gift expenses"
+    },
+    {
+      "code": "520315",
+      "title": "ค่าจ้างพนักงาน PR"
+    },
+    {
+      "code": "520316",
+      "title": "ค่าใช้จ่ายในการขายอื่นๆ /Others on sales cost"
+    },
+    {
+      "code": "530116",
+      "title": "เงินเดือน /Wages and salary"
+    },
+    {
+      "code": "530117",
+      "title": "โบนัส /Bonus"
+    },
+    {
+      "code": "530213",
+      "title": "ค่าโทรศัพท์ สำนักงาน /Utility expenses - telephone"
+    },
+    {
+      "code": "530214",
+      "title": "สวัสดิการพนักงาน /Other welfare expenses"
+    },
+    {
+      "code": "530215",
+      "title": "ค่าเช่าห้องประชุมภายใน /Meeting Room"
+    },
+    {
+      "code": "530216",
+      "title": "ค่าเช่าห้องประชุมรายเดือน /Meeting Room"
+    },
+    {
+      "code": "530217",
+      "title": "ค่าส่ง/ไปรษณีย์(ที่ไม่ใช่เอกสาร)"
+    },
+    {
+      "code": "530218",
+      "title": "ค่าเครื่องเขียน/วัสดุอุปกรณ์ /Stationery and supplies expenses"
+    },
+    {
+      "code": "530307",
+      "title": "ค่าสาธารณูปโภค /Utilities"
+    },
+    {
+      "code": "530409",
+      "title": "ค่าที่ปรึกษาธุรกิจ"
+    },
+    {
+      "code": "530410",
+      "title": "ค่าทำบัญชี /service expenses - bookkeeping"
+    },
+    {
+      "code": "530411",
+      "title": "ค่าสอบบัญชี /service expenses - auditing fee"
+    },
+    {
+      "code": "530412",
+      "title": "System Support (App, ChatGPT)"
+    },
+    {
+      "code": "530413",
+      "title": "System Development"
+    },
+    {
+      "code": "530414",
+      "title": "ค่าจ้างทำของ /Hire of work expenses"
+    },
+    {
+      "code": "530415",
+      "title": "ค่าอบรมพัฒนาพนักงาน /Training seminar"
+    },
+    {
+      "code": "530416",
+      "title": "ค่าจ้างจัดทำเและตรวจสอบบัญชี"
+    },
+    {
+      "code": "530417",
+      "title": "ค่าจ้างวิจัยและออกแบบหลักสูตร /R&D personel cost"
+    },
+    {
+      "code": "530418",
+      "title": "ค่าจ้างฝ่ายกฏหมาย /สัญญา"
+    }
+  ],
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "password_hash": "hashed_secret",
+      "name": "System Admin",
+      "role": "admin",
+      "created_at": "2025-12-17T05:38:17.613Z",
+      "updated_at": "2025-12-17T05:38:17.613Z"
+    },
+    {
+      "id": 2,
+      "username": "ceo",
+      "password_hash": "hashed_secret",
+      "name": "CEO User",
+      "role": "ceo",
+      "created_at": "2025-12-17T05:38:17.613Z",
+      "updated_at": "2025-12-17T05:38:17.613Z"
+    }
+  ],
+  "products": [
+    {
+      "code": "GENAI",
+      "name": "Generative AI for All Level",
+      "category": "GENAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "GENAI-SALES",
+      "name": "Generative AI for Sales",
+      "category": "GENAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "GENAI-FINANCE",
+      "name": "Generative AI for Finance",
+      "category": "GENAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "GENAI-HR",
+      "name": "Generative AI for HR",
+      "category": "GENAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "GENAI-MKT",
+      "name": "Generative AI for Marketing",
+      "category": "GENAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "GENAI-RISK",
+      "name": "Generative AI for Risk Management",
+      "category": "GENAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "GENAI-EXECUTIVE",
+      "name": "Generative AI for Executive",
+      "category": "GENAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "GENAI-OPERATION",
+      "name": "Generative AI for Operation",
+      "category": "GENAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "GENAI-BIZ",
+      "name": "Generative AI for Business Transformation & Future Trends",
+      "category": "GENAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "GENAI-FIELD",
+      "name": "Generative AI for Future Field Service",
+      "category": "GENAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "GENAI-HALF",
+      "name": "Generative AI for All Level - Half day",
+      "category": "GENAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "GENAI-TOWNHALL",
+      "name": "Generative AI for All Level - Townhall",
+      "category": "GENAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "ADVAI-PRODUCTIVITY",
+      "name": "Advance AI Tools for Future Work",
+      "category": "ADVAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "ADVAI-PRESENT",
+      "name": "The Magic of AI Presentation",
+      "category": "ADVAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "ADVAI-RESEARCH",
+      "name": "Advance AI For Business Research and Strategy Analysis",
+      "category": "ADVAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "ADVAI-CONTENT",
+      "name": "Advance AI for Creative Content Creation Across Digital Platform",
+      "category": "ADVAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "ADVAI-MKT-STUDIO",
+      "name": "Advance AI for Marketing Studio",
+      "category": "ADVAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "ADVAI-MKT-STRATEGY",
+      "name": "Advance AI for Marketing Strategy",
+      "category": "ADVAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "ADVAI-GITHUB",
+      "name": "Advance AI GitHub Copilot",
+      "category": "ADVAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "ADVAI-WORKFLOW",
+      "name": "Advance AI Automation Workflow",
+      "category": "ADVAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "ADVAI-RPA",
+      "name": "Advance AI Automation with RPA",
+      "category": "ADVAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "ADVAI-TIME-MGMT",
+      "name": "AI for Time & Prioritize Management",
+      "category": "ADVAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "ADVAI-BUILD-AI",
+      "name": "Build Your AI - Customize AI Empire & Army for Business",
+      "category": "ADVAI",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "SKLBEYOND-CRITICAL",
+      "name": "Critical Thinking",
+      "category": "SKLBEYOND",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "SKLBEYOND-THINK-DESIGN",
+      "name": "Design Thinking",
+      "category": "SKLBEYOND",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "SKLBEYOND-COMMU",
+      "name": "Communication",
+      "category": "SKLBEYOND",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "SKLBEYOND-COMMU-PRESENT",
+      "name": "Insight-Driven Powerful Presentation",
+      "category": "SKLBEYOND",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "SKLBEYOND-TEAM-MGMT",
+      "name": "Team Management",
+      "category": "SKLBEYOND",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "SKLBEYOND-DT-AI",
+      "name": "Design Thinking + AI",
+      "category": "SKLBEYOND",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "JOURNEY-AI-TRANSFORM",
+      "name": "[Journey] AI Transformation Program",
+      "category": "JOURNEY",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "JOURNEY-AI-MENTOR",
+      "name": "[Journey] AI Mentoring Program",
+      "category": "JOURNEY",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "JOURNEY-AI-EXEC",
+      "name": "[Journey] AI for Executive Journey",
+      "category": "JOURNEY",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "JOURNEY-SELF-LEADER",
+      "name": "[Journey] SELF - Leadershift",
+      "category": "JOURNEY",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "JOURNEY-GOAL",
+      "name": "[Journey] Design Your Goal & Work Life Balance",
+      "category": "JOURNEY",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "JOURNEY-TIME",
+      "name": "[Journey] Master Your Time",
+      "category": "JOURNEY",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "JOURNEY-PEOPLE",
+      "name": "[Journey] Become the Person Everyone Loves to Work With",
+      "category": "JOURNEY",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "JOURNEY-ORG-LEADER",
+      "name": "[Journey] Organizational - Leadershift",
+      "category": "JOURNEY",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "JOURNEY-TEAM-LEADER",
+      "name": "[Journey] TEAM - Leadershift",
+      "category": "JOURNEY",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "JOURNEY-TRAINER",
+      "name": "[Journey] Transformative Trainer",
+      "category": "JOURNEY",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "TRAIN-TRANSFORMATIVE",
+      "name": "Become Transformative Trainer",
+      "category": "TRAIN",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "TRAIN-LED",
+      "name": "LED Workshop Design",
+      "category": "TRAIN",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "TRAIN-ITEQUIP",
+      "name": "หยุดตบตี อุปกรณ์ IT ในห้องเรียน",
+      "category": "TRAIN",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "TRAIN-WOWFA",
+      "name": "Wow Facilitator",
+      "category": "TRAIN",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "POC-MENTOR",
+      "name": "Project Mentoring (POC)",
+      "category": "OTHER",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "INS-DATA-ANALYTIC",
+      "name": "Data Analytic And Visualization Made Easy With AI",
+      "category": "OTHER",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "PNEGO",
+      "name": "Psychological Negotiation Tactics (With AI Assistance)",
+      "category": "OTHER",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "LOGIC",
+      "name": "Business Logical Thinking In The Age of AI",
+      "category": "OTHER",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "PPTDE",
+      "name": "Psychology of Presentation Design",
+      "category": "OTHER",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "TIMEP",
+      "name": "Time & Prioritize Psychology Management",
+      "category": "OTHER",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "IMPT-PITCHING",
+      "name": "Impact Pitch for Sales",
+      "category": "OTHER",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "SALE-AJBALLY",
+      "name": "Sale by AjBally",
+      "category": "OTHER",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    },
+    {
+      "code": "CANVA",
+      "name": "Canva for Business",
+      "category": "OTHER",
+      "description": null,
+      "is_active": true,
+      "created_at": "2025-12-17T05:16:55.263Z",
+      "updated_at": "2025-12-17T05:16:55.263Z"
+    }
+  ],
+  "team_members": [
+    {
+      "id": 1,
+      "name": "pamu mon",
+      "nickname": "pamu",
+      "type": "internal",
+      "email": "pamu@gmail.com",
+      "phone": "0812345678",
+      "bank_account": "1000000001",
+      "bank_name": "KBank",
+      "tax_id": "",
+      "created_at": "2025-12-17T05:34:03.664Z",
+      "updated_at": "2025-12-17T05:34:03.664Z",
+      "is_company": false,
+      "bank_account_name": null,
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "name": "Anan Wong",
+      "nickname": "Anan",
+      "type": "internal",
+      "email": "anan.w@company.com",
+      "phone": "0812345679",
+      "bank_account": "1000000002",
+      "bank_name": "SCB",
+      "tax_id": "",
+      "created_at": "2025-12-17T05:34:03.664Z",
+      "updated_at": "2025-12-17T05:34:03.664Z",
+      "is_company": false,
+      "bank_account_name": null,
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "name": "Sirilak P.",
+      "nickname": "Lak",
+      "type": "internal",
+      "email": "sirilak.p@company.com",
+      "phone": "0823456789",
+      "bank_account": "1000000003",
+      "bank_name": "Bangkok Bank",
+      "tax_id": "",
+      "created_at": "2025-12-17T05:34:03.664Z",
+      "updated_at": "2025-12-17T05:34:03.664Z",
+      "is_company": false,
+      "bank_account_name": null,
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "name": "Thanawat T.",
+      "nickname": "Wat",
+      "type": "internal",
+      "email": "thanawat.t@company.com",
+      "phone": "0834567890",
+      "bank_account": "1000000004",
+      "bank_name": "Krungsri",
+      "tax_id": "",
+      "created_at": "2025-12-17T05:34:03.664Z",
+      "updated_at": "2025-12-17T05:34:03.664Z",
+      "is_company": false,
+      "bank_account_name": null,
+      "is_active": true
+    },
+    {
+      "id": 5,
+      "name": "Kanya R.",
+      "nickname": "Kanya",
+      "type": "internal",
+      "email": "kanya.r@company.com",
+      "phone": "0845678901",
+      "bank_account": "1000000005",
+      "bank_name": "TTB",
+      "tax_id": "",
+      "created_at": "2025-12-17T05:34:03.664Z",
+      "updated_at": "2025-12-17T05:34:03.664Z",
+      "is_company": false,
+      "bank_account_name": null,
+      "is_active": true
+    },
+    {
+      "id": 6,
+      "name": "Nattapon S.",
+      "nickname": "Nat",
+      "type": "external",
+      "email": "nattapon.s@gmail.com",
+      "phone": "0856789012",
+      "bank_account": "1000000006",
+      "bank_name": "KBank",
+      "tax_id": "",
+      "created_at": "2025-12-17T05:34:03.664Z",
+      "updated_at": "2025-12-17T05:34:03.664Z",
+      "is_company": false,
+      "bank_account_name": null,
+      "is_active": true
+    },
+    {
+      "id": 7,
+      "name": "Patcharin L.",
+      "nickname": "Pat",
+      "type": "external",
+      "email": "patcharin.l@gmail.com",
+      "phone": "0867890123",
+      "bank_account": "1000000007",
+      "bank_name": "SCB",
+      "tax_id": "",
+      "created_at": "2025-12-17T05:34:03.664Z",
+      "updated_at": "2025-12-17T05:34:03.664Z",
+      "is_company": false,
+      "bank_account_name": null,
+      "is_active": true
+    },
+    {
+      "id": 8,
+      "name": "Supakit M.",
+      "nickname": "Kit",
+      "type": "external",
+      "email": "supakit.m@yahoo.com",
+      "phone": "0878901234",
+      "bank_account": "1000000008",
+      "bank_name": "Bangkok Bank",
+      "tax_id": "",
+      "created_at": "2025-12-17T05:34:03.664Z",
+      "updated_at": "2025-12-17T05:34:03.664Z",
+      "is_company": false,
+      "bank_account_name": null,
+      "is_active": true
+    },
+    {
+      "id": 9,
+      "name": "Ratchanon C.",
+      "nickname": "Non",
+      "type": "external",
+      "email": "ratchanon.c@hotmail.com",
+      "phone": "0889012345",
+      "bank_account": "1000000009",
+      "bank_name": "Krungsri",
+      "tax_id": "",
+      "created_at": "2025-12-17T05:34:03.664Z",
+      "updated_at": "2025-12-17T05:34:03.664Z",
+      "is_company": false,
+      "bank_account_name": null,
+      "is_active": true
+    },
+    {
+      "id": 10,
+      "name": "Worawut K.",
+      "nickname": "Wu",
+      "type": "external",
+      "email": "worawut.k@gmail.com",
+      "phone": "0890123456",
+      "bank_account": "1000000010",
+      "bank_name": "TTB",
+      "tax_id": "",
+      "created_at": "2025-12-17T05:34:03.664Z",
+      "updated_at": "2025-12-17T05:34:03.664Z",
+      "is_company": false,
+      "bank_account_name": null,
+      "is_active": true
+    },
+    {
+      "id": 11,
+      "name": "Zoriel DreamMoon",
+      "nickname": "Zory",
+      "type": "Full-time",
+      "email": "zoriel@gmail.com",
+      "phone": "0658167777",
+      "bank_account": "04339005177",
+      "bank_name": "กสิกรไทย",
+      "tax_id": "",
+      "created_at": "2025-12-20T03:38:31.252Z",
+      "updated_at": "2025-12-20T03:38:31.252Z",
+      "is_company": false,
+      "bank_account_name": null,
+      "is_active": true
+    }
+  ],
+  "member_documents": [
+    {
+      "id": 1,
+      "member_id": 1,
+      "doc_type": "document",
+      "file_name": "Screenshot 2025-12-20 001611.png",
+      "file_path": "/uploads/members/1/document_1767365371389.png",
+      "is_active": false,
+      "uploaded_at": "2026-01-02T14:49:31.455Z"
+    },
+    {
+      "id": 2,
+      "member_id": 1,
+      "doc_type": "document",
+      "file_name": "Screenshot 2025-04-13 204746.png",
+      "file_path": "/uploads/members/1/document_1767365385416.png",
+      "is_active": false,
+      "uploaded_at": "2026-01-02T14:49:45.557Z"
+    }
+  ],
+  "product_categories": [
+    {
+      "code": "GENAI",
+      "label": "Generative AI",
+      "color": "purple",
+      "created_at": "2025-12-19T15:54:05.946Z",
+      "updated_at": "2025-12-19T15:54:05.946Z"
+    },
+    {
+      "code": "ADVAI",
+      "label": "Advance AI",
+      "color": "blue",
+      "created_at": "2025-12-19T15:54:05.948Z",
+      "updated_at": "2025-12-19T15:54:05.948Z"
+    },
+    {
+      "code": "SKLBEYOND",
+      "label": "Skills Beyond AI",
+      "color": "emerald",
+      "created_at": "2025-12-19T15:54:05.949Z",
+      "updated_at": "2025-12-19T15:54:05.949Z"
+    },
+    {
+      "code": "JOURNEY",
+      "label": "Journey Programs",
+      "color": "orange",
+      "created_at": "2025-12-19T15:54:05.950Z",
+      "updated_at": "2025-12-19T15:54:05.950Z"
+    },
+    {
+      "code": "TRAIN",
+      "label": "Training",
+      "color": "pink",
+      "created_at": "2025-12-19T15:54:05.950Z",
+      "updated_at": "2025-12-19T15:54:05.950Z"
+    },
+    {
+      "code": "OTHER",
+      "label": "อื่นๆ",
+      "color": "gray",
+      "created_at": "2025-12-19T15:54:05.951Z",
+      "updated_at": "2025-12-19T15:54:05.951Z"
+    }
+  ],
+  "projects": [
+    {
+      "project_code": "CONSULT00001",
+      "project_name": "test c",
+      "product_code": null,
+      "customer_name": "qwewqe",
+      "status": "Active",
+      "project_type": "Consult",
+      "start_date": "2025-12-16T17:00:00.000Z",
+      "end_date": "2025-12-16T17:00:00.000Z",
+      "location": null,
+      "description": null,
+      "budget": null,
+      "participant_count": null,
+      "created_by": 1,
+      "created_at": "2025-12-17T06:43:58.936Z",
+      "updated_at": "2025-12-17T10:29:46.259Z"
+    },
+    {
+      "project_code": "INHOUSE00001",
+      "project_name": "testttt",
+      "product_code": "ADVAI-GITHUB",
+      "customer_name": "pamu",
+      "status": "Active",
+      "project_type": "In-House",
+      "start_date": "2025-12-16T17:00:00.000Z",
+      "end_date": "2025-12-22T17:00:00.000Z",
+      "location": "Bangkok",
+      "description": "ttt",
+      "budget": "444444.00",
+      "participant_count": 44,
+      "created_by": 1,
+      "created_at": "2025-12-17T06:35:52.263Z",
+      "updated_at": "2025-12-17T10:29:48.459Z"
+    },
+    {
+      "project_code": "TEST001",
+      "project_name": "Test Project from API",
+      "product_code": "GENAI-BIZ",
+      "customer_name": "Postman Client Ltd.",
+      "status": "Active",
+      "project_type": "In-House",
+      "start_date": "2024-12-31T17:00:00.000Z",
+      "end_date": "2025-01-04T17:00:00.000Z",
+      "location": null,
+      "description": null,
+      "budget": "50000.00",
+      "participant_count": null,
+      "created_by": 1,
+      "created_at": "2025-12-17T06:22:11.305Z",
+      "updated_at": "2025-12-17T10:29:50.549Z"
+    },
+    {
+      "project_code": "CONSULT00002",
+      "project_name": "test dd",
+      "product_code": null,
+      "customer_name": "asd",
+      "status": "Active",
+      "project_type": "Consult",
+      "start_date": "2025-12-19T17:00:00.000Z",
+      "end_date": "2025-12-25T17:00:00.000Z",
+      "location": null,
+      "description": null,
+      "budget": null,
+      "participant_count": null,
+      "created_by": 1,
+      "created_at": "2025-12-19T17:38:32.123Z",
+      "updated_at": "2025-12-19T17:38:32.123Z"
+    },
+    {
+      "project_code": "INHOUSE00003",
+      "project_name": "Test Project WWW",
+      "product_code": "ADVAI-GITHUB",
+      "customer_name": "www",
+      "status": "Active",
+      "project_type": "In-House",
+      "start_date": "2026-01-14T17:00:00.000Z",
+      "end_date": "2026-01-14T17:00:00.000Z",
+      "location": "Bangkok",
+      "description": null,
+      "budget": null,
+      "participant_count": 22,
+      "created_by": 1,
+      "created_at": "2025-12-25T09:44:04.697Z",
+      "updated_at": "2025-12-28T06:55:37.955Z"
+    },
+    {
+      "project_code": "CONSULT00003",
+      "project_name": "TEST0103",
+      "product_code": null,
+      "customer_name": null,
+      "status": "Completed",
+      "project_type": "Consult",
+      "start_date": "2026-01-12T17:00:00.000Z",
+      "end_date": null,
+      "location": null,
+      "description": null,
+      "budget": null,
+      "participant_count": null,
+      "created_by": 1,
+      "created_at": "2026-01-03T16:45:35.109Z",
+      "updated_at": "2026-01-04T10:23:18.221Z"
+    },
+    {
+      "project_code": "INHOUSE00002",
+      "project_name": "Test Pros",
+      "product_code": "ADVAI-GITHUB",
+      "customer_name": "sda",
+      "status": "Active",
+      "project_type": "In-House",
+      "start_date": "2025-12-17T17:00:00.000Z",
+      "end_date": "2025-12-17T17:00:00.000Z",
+      "location": "Bangkok",
+      "description": null,
+      "budget": null,
+      "participant_count": 22,
+      "created_by": 1,
+      "created_at": "2025-12-17T11:08:13.219Z",
+      "updated_at": "2026-01-04T10:23:29.633Z"
+    },
+    {
+      "project_code": "PUBLIC00001",
+      "project_name": "wee",
+      "product_code": "ADVAI-GITHUB",
+      "customer_name": "",
+      "status": "Completed",
+      "project_type": "Public",
+      "start_date": "2025-12-23T17:00:00.000Z",
+      "end_date": "2025-12-29T17:00:00.000Z",
+      "location": "Bangkok",
+      "description": "",
+      "budget": null,
+      "participant_count": null,
+      "created_by": 1,
+      "created_at": "2025-12-17T06:40:51.337Z",
+      "updated_at": "2026-01-04T10:32:08.300Z"
+    },
+    {
+      "project_code": "INHOUSE00004",
+      "project_name": "test 51",
+      "product_code": null,
+      "customer_name": "test",
+      "status": "Active",
+      "project_type": "In-House",
+      "start_date": "2026-01-20T17:00:00.000Z",
+      "end_date": null,
+      "location": null,
+      "description": null,
+      "budget": null,
+      "participant_count": null,
+      "created_by": 1,
+      "created_at": "2026-01-05T03:17:15.407Z",
+      "updated_at": "2026-01-05T03:17:15.407Z"
+    }
+  ],
+  "project_team": [
+    {
+      "id": 1,
+      "project_code": "TEST001",
+      "member_id": 1,
+      "role": "trainer",
+      "created_at": "2025-12-17T06:22:11.305Z",
+      "updated_at": "2025-12-17T06:22:11.305Z"
+    },
+    {
+      "id": 2,
+      "project_code": "TEST001",
+      "member_id": 2,
+      "role": "ta",
+      "created_at": "2025-12-17T06:22:11.305Z",
+      "updated_at": "2025-12-17T06:22:11.305Z"
+    },
+    {
+      "id": 5,
+      "project_code": "INHOUSE00002",
+      "member_id": null,
+      "role": "TA",
+      "created_at": "2025-12-19T16:50:01.208Z",
+      "updated_at": "2025-12-19T16:50:01.208Z"
+    },
+    {
+      "id": 6,
+      "project_code": "INHOUSE00001",
+      "member_id": 2,
+      "role": "Co-Trainer",
+      "created_at": "2025-12-19T16:57:31.764Z",
+      "updated_at": "2025-12-19T16:57:31.764Z"
+    },
+    {
+      "id": 7,
+      "project_code": "CONSULT00001",
+      "member_id": 1,
+      "role": "MC",
+      "created_at": "2025-12-19T16:57:50.046Z",
+      "updated_at": "2025-12-19T16:57:50.046Z"
+    },
+    {
+      "id": 8,
+      "project_code": "CONSULT00002",
+      "member_id": 11,
+      "role": "TA",
+      "created_at": "2025-12-20T03:39:01.404Z",
+      "updated_at": "2025-12-20T03:39:01.404Z"
+    },
+    {
+      "id": 9,
+      "project_code": "INHOUSE00002",
+      "member_id": 2,
+      "role": "Co-Trainer",
+      "created_at": "2025-12-25T09:08:28.827Z",
+      "updated_at": "2025-12-25T09:08:28.827Z"
+    }
+  ],
+  "financial_accounts": [
+    {
+      "id": 1,
+      "name": "Insight Financial",
+      "type": "bank",
+      "account_number": "123-4-56789-0",
+      "bank_code": "scb",
+      "balance": "1721926.00",
+      "is_primary": true,
+      "is_active": true,
+      "created_at": "2025-12-17T09:42:02.564Z",
+      "updated_at": "2025-12-17T10:28:35.505Z"
+    }
+  ],
+  "incomes": [
+    {
+      "id": 1,
+      "project_code": "PUBLIC00001",
+      "description": "Test Income",
+      "invoice_no": "PUB-TEST-001",
+      "date": "2025-12-17T17:00:00.000Z",
+      "amount": "500000.00",
+      "status": "received",
+      "attachments": [],
+      "created_by": 1,
+      "created_at": "2025-12-17T09:04:16.805Z",
+      "updated_at": "2025-12-17T09:04:16.805Z",
+      "account_id": null
+    },
+    {
+      "id": 2,
+      "project_code": "CONSULT00001",
+      "description": "Test Income Con",
+      "invoice_no": "CON-0001",
+      "date": "2025-12-16T17:00:00.000Z",
+      "amount": "900000.00",
+      "status": "pending",
+      "attachments": [],
+      "created_by": 1,
+      "created_at": "2025-12-17T09:05:22.659Z",
+      "updated_at": "2025-12-17T09:05:48.529Z",
+      "account_id": null
+    },
+    {
+      "id": 4,
+      "project_code": "PUBLIC00001",
+      "description": "Test Income2",
+      "invoice_no": "PUB-TEST-002",
+      "date": "2025-12-21T17:00:00.000Z",
+      "amount": "900000.00",
+      "status": "received",
+      "attachments": [],
+      "created_by": 1,
+      "created_at": "2025-12-17T11:04:36.683Z",
+      "updated_at": "2025-12-17T11:09:18.145Z",
+      "account_id": 1
+    },
+    {
+      "id": 3,
+      "project_code": "INHOUSE00001",
+      "description": "Test Income INH",
+      "invoice_no": "INH-TEST-001",
+      "date": "2025-12-23T17:00:00.000Z",
+      "amount": "800000.00",
+      "status": "Received",
+      "attachments": [],
+      "created_by": 1,
+      "created_at": "2025-12-17T09:06:30.566Z",
+      "updated_at": "2025-12-17T11:15:29.817Z",
+      "account_id": 1
+    },
+    {
+      "id": 7,
+      "project_code": "INHOUSE00002",
+      "description": "Test Income4",
+      "invoice_no": "INH-TEST-004",
+      "date": "2025-12-24T17:00:00.000Z",
+      "amount": "1111.00",
+      "status": "Received",
+      "attachments": [],
+      "created_by": 1,
+      "created_at": "2025-12-17T11:16:14.546Z",
+      "updated_at": "2025-12-18T13:51:42.912Z",
+      "account_id": 1
+    },
+    {
+      "id": 6,
+      "project_code": "INHOUSE00002",
+      "description": "Test Income3",
+      "invoice_no": "INH-TEST-003",
+      "date": "2025-12-15T17:00:00.000Z",
+      "amount": "200000.00",
+      "status": "Received",
+      "attachments": [],
+      "created_by": 1,
+      "created_at": "2025-12-17T11:13:48.652Z",
+      "updated_at": "2025-12-18T13:51:45.501Z",
+      "account_id": 1
+    },
+    {
+      "id": 5,
+      "project_code": "INHOUSE00002",
+      "description": "Test Income22",
+      "invoice_no": "INV-TEST-002",
+      "date": "2025-12-15T17:00:00.000Z",
+      "amount": "200001.00",
+      "status": "Received",
+      "attachments": [],
+      "created_by": 1,
+      "created_at": "2025-12-17T11:08:46.142Z",
+      "updated_at": "2025-12-18T13:51:46.342Z",
+      "account_id": 1
+    },
+    {
+      "id": 10,
+      "project_code": "CONSULT00002",
+      "description": "Test Income Con",
+      "invoice_no": "543dasas",
+      "date": "2025-12-27T17:00:00.000Z",
+      "amount": "800000.00",
+      "status": "pending",
+      "attachments": [],
+      "created_by": 1,
+      "created_at": "2025-12-20T04:38:57.691Z",
+      "updated_at": "2025-12-20T04:38:57.691Z",
+      "account_id": 1
+    },
+    {
+      "id": 11,
+      "project_code": "CONSULT00002",
+      "description": "Test Income",
+      "invoice_no": "CON-0001",
+      "date": "2025-12-30T17:00:00.000Z",
+      "amount": "50000.00",
+      "status": "pending",
+      "attachments": [],
+      "created_by": 1,
+      "created_at": "2025-12-25T09:07:58.620Z",
+      "updated_at": "2025-12-25T09:07:58.620Z",
+      "account_id": 1
+    },
+    {
+      "id": 12,
+      "project_code": "INHOUSE00003",
+      "description": "Consulting Fee for Dec 2025",
+      "invoice_no": "INV-TEST-001-EDITED",
+      "date": "2026-01-14T17:00:00.000Z",
+      "amount": "150000.00",
+      "status": "pending",
+      "attachments": [],
+      "created_by": 1,
+      "created_at": "2025-12-28T08:02:38.162Z",
+      "updated_at": "2025-12-28T10:27:06.485Z",
+      "account_id": 1
+    },
+    {
+      "id": 13,
+      "project_code": "INHOUSE00004",
+      "description": "",
+      "invoice_no": "INHOUSE00004",
+      "date": "2026-01-20T17:00:00.000Z",
+      "amount": "300000.00",
+      "status": "pending",
+      "attachments": [],
+      "created_by": 1,
+      "created_at": "2026-01-05T03:17:36.522Z",
+      "updated_at": "2026-01-05T03:17:36.522Z",
+      "account_id": 1
+    }
+  ],
+  "expenses": [
+    {
+      "id": 13,
+      "created_at": "2026-01-04T11:06:05.507Z",
+      "updated_at": "2026-01-04T11:06:05.507Z",
+      "project_code": "INHOUSE00003",
+      "account_code": "510110",
+      "expense_type": "วางบิล",
+      "contact": "Shiina",
+      "bill_header": "Shiina",
+      "payback_to": "Shiina",
+      "description": "ShiinaShiinaShiinaShiina",
+      "bank_name": "กสิกรไทย",
+      "bank_account_number": "00000000",
+      "bank_account_name": "Shiina",
+      "phone": "000000000",
+      "email": "Shiina@gmail.com",
+      "issue_date": null,
+      "due_date": "2026-01-19T17:00:00.000Z",
+      "transfer_date": null,
+      "price": "10000.00",
+      "discount": "0.00",
+      "vat_amount": "700.00",
+      "wht_amount": "300.00",
+      "net_amount": "10400.00",
+      "internal_status": "บัญชีตรวจ และ ได้รับเอกสารตัวจริง",
+      "peak_status": null,
+      "report_month": "2026-01",
+      "created_by": null,
+      "approved_by": null,
+      "approved_at": null,
+      "reject_reason": null,
+      "rejected_by": null,
+      "rejected_at": null
+    },
+    {
+      "id": 14,
+      "created_at": "2026-01-04T11:06:59.880Z",
+      "updated_at": "2026-01-04T11:06:59.880Z",
+      "project_code": "TEST001",
+      "account_code": "510112",
+      "expense_type": "วางบิล",
+      "contact": "Fayu",
+      "bill_header": "Fayu",
+      "payback_to": "Fayu",
+      "description": "FayuFayu",
+      "bank_name": "กสิกรไทย",
+      "bank_account_number": "00000000",
+      "bank_account_name": "Fayu",
+      "phone": "000000000",
+      "email": null,
+      "issue_date": null,
+      "due_date": "2026-01-19T17:00:00.000Z",
+      "transfer_date": null,
+      "price": "4000.00",
+      "discount": "0.00",
+      "vat_amount": "0.00",
+      "wht_amount": "120.00",
+      "net_amount": "3880.00",
+      "internal_status": "บัญชีตรวจ และ ได้รับเอกสารตัวจริง",
+      "peak_status": null,
+      "report_month": "2026-01",
+      "created_by": null,
+      "approved_by": null,
+      "approved_at": null,
+      "reject_reason": null,
+      "rejected_by": null,
+      "rejected_at": null
+    },
+    {
+      "id": 16,
+      "created_at": "2026-01-05T03:24:34.660Z",
+      "updated_at": "2026-01-05T03:25:04.309Z",
+      "project_code": "INHOUSE00004",
+      "account_code": "510113",
+      "expense_type": "สำรองจ่าย",
+      "contact": "DreamMoon Yuki",
+      "bill_header": "7-11",
+      "payback_to": "DreamMoon Yuki",
+      "description": "สมุด ดินสอ กระดาษ",
+      "bank_name": "กสิกรไทย",
+      "bank_account_number": "00000000",
+      "bank_account_name": "DreamMoon Yuki",
+      "phone": "000000000",
+      "email": "Yuki@gmail.com",
+      "issue_date": null,
+      "due_date": "2026-02-03T17:00:00.000Z",
+      "transfer_date": null,
+      "price": "500.00",
+      "discount": "0.00",
+      "vat_amount": "0.00",
+      "wht_amount": "0.00",
+      "net_amount": "500.00",
+      "internal_status": "บัญชีตรวจ และ ได้รับเอกสารตัวจริง",
+      "peak_status": null,
+      "report_month": "2026-02",
+      "created_by": null,
+      "approved_by": null,
+      "approved_at": null,
+      "reject_reason": null,
+      "rejected_by": null,
+      "rejected_at": null
+    },
+    {
+      "id": 10,
+      "created_at": "2026-01-03T16:49:39.266Z",
+      "updated_at": "2026-01-04T10:35:27.134Z",
+      "project_code": "CONSULT00003",
+      "account_code": "510117",
+      "expense_type": "วางบิล",
+      "contact": "Zoriel",
+      "bill_header": "Zoriel",
+      "payback_to": "Zoriel",
+      "description": "พี่เจมส์ปล่อยผมไปนอนนนนนนนน",
+      "bank_name": "ไทยพาณิชย์",
+      "bank_account_number": "00000000",
+      "bank_account_name": "Zoriel",
+      "phone": "000000000",
+      "email": "Zoriel@gmail.com",
+      "issue_date": null,
+      "due_date": "2026-02-04T17:00:00.000Z",
+      "transfer_date": null,
+      "price": "30000.00",
+      "discount": "0.00",
+      "vat_amount": "2100.00",
+      "wht_amount": "900.00",
+      "net_amount": "31200.00",
+      "internal_status": "VP อนุมัติแล้ว ส่งเบิกได้",
+      "peak_status": null,
+      "report_month": "2026-02",
+      "created_by": null,
+      "approved_by": null,
+      "approved_at": null,
+      "reject_reason": null,
+      "rejected_by": null,
+      "rejected_at": null
+    },
+    {
+      "id": 9,
+      "created_at": "2026-01-03T09:27:26.938Z",
+      "updated_at": "2026-01-04T10:45:38.135Z",
+      "project_code": "INHOUSE00003",
+      "account_code": "510115",
+      "expense_type": "วางบิล",
+      "contact": "Zoriel",
+      "bill_header": "Zoriel",
+      "payback_to": "Zoriel",
+      "description": "ZorielZoriel",
+      "bank_name": "ไทยพาณิชย์",
+      "bank_account_number": "00000000",
+      "bank_account_name": "Zoriel",
+      "phone": "000000000",
+      "email": "Zoriel@gmail.com",
+      "issue_date": null,
+      "due_date": "2026-01-19T17:00:00.000Z",
+      "transfer_date": null,
+      "price": "10000.00",
+      "discount": "0.00",
+      "vat_amount": "700.00",
+      "wht_amount": "300.00",
+      "net_amount": "10400.00",
+      "internal_status": "VP อนุมัติแล้ว ส่งเบิกได้",
+      "peak_status": null,
+      "report_month": "2026-01",
+      "created_by": null,
+      "approved_by": null,
+      "approved_at": null,
+      "reject_reason": null,
+      "rejected_by": null,
+      "rejected_at": null
+    },
+    {
+      "id": 12,
+      "created_at": "2026-01-04T11:01:05.486Z",
+      "updated_at": "2026-01-04T11:01:05.486Z",
+      "project_code": "INHOUSE00002",
+      "account_code": "510113",
+      "expense_type": "วางบิล",
+      "contact": "Hibana",
+      "bill_header": "Hibana",
+      "payback_to": "Hibana",
+      "description": "HibanaHibanaHibana",
+      "bank_name": "กรุงเทพ",
+      "bank_account_number": "00000000",
+      "bank_account_name": "Hibana",
+      "phone": "000000000",
+      "email": "Hibana@gmail.com",
+      "issue_date": null,
+      "due_date": "2026-01-19T17:00:00.000Z",
+      "transfer_date": null,
+      "price": "5000.00",
+      "discount": "0.00",
+      "vat_amount": "350.00",
+      "wht_amount": "150.00",
+      "net_amount": "5200.00",
+      "internal_status": "บัญชีตรวจ และ ได้รับเอกสารตัวจริง",
+      "peak_status": null,
+      "report_month": "2026-01",
+      "created_by": null,
+      "approved_by": null,
+      "approved_at": null,
+      "reject_reason": null,
+      "rejected_by": null,
+      "rejected_at": null
+    },
+    {
+      "id": 7,
+      "created_at": "2026-01-03T07:57:13.229Z",
+      "updated_at": "2026-01-04T12:00:03.570Z",
+      "project_code": "INHOUSE00003",
+      "account_code": "510110",
+      "expense_type": "วางบิล",
+      "contact": "pamu",
+      "bill_header": "pamu",
+      "payback_to": "pamu",
+      "description": "eew",
+      "bank_name": "ไทยพาณิชย์",
+      "bank_account_number": "00000000",
+      "bank_account_name": "pamu",
+      "phone": "000000000",
+      "email": "",
+      "issue_date": null,
+      "due_date": "2026-01-18T17:00:00.000Z",
+      "transfer_date": null,
+      "price": "30000.00",
+      "discount": "0.00",
+      "vat_amount": "0.00",
+      "wht_amount": "900.00",
+      "net_amount": "29100.00",
+      "internal_status": "บัญชีตรวจ และ ได้รับเอกสารตัวจริง",
+      "peak_status": null,
+      "report_month": "2026-01",
+      "created_by": null,
+      "approved_by": null,
+      "approved_at": null,
+      "reject_reason": null,
+      "rejected_by": null,
+      "rejected_at": null
+    },
+    {
+      "id": 8,
+      "created_at": "2026-01-03T08:08:23.914Z",
+      "updated_at": "2026-01-05T04:24:16.710Z",
+      "project_code": "INHOUSE00003",
+      "account_code": "510111",
+      "expense_type": "สำรองจ่าย",
+      "contact": "pamu",
+      "bill_header": "pamu",
+      "payback_to": "zoriel",
+      "description": "test",
+      "bank_name": "กสิกรไทย",
+      "bank_account_number": "00000000",
+      "bank_account_name": "zoriel",
+      "phone": "000000000",
+      "email": "",
+      "issue_date": null,
+      "due_date": "2026-01-15T17:00:00.000Z",
+      "transfer_date": null,
+      "price": "300.00",
+      "discount": "0.00",
+      "vat_amount": "0.00",
+      "wht_amount": "0.00",
+      "net_amount": "300.00",
+      "internal_status": "VP อนุมัติแล้ว ส่งเบิกได้",
+      "peak_status": null,
+      "report_month": "2026-01",
+      "created_by": null,
+      "approved_by": null,
+      "approved_at": null,
+      "reject_reason": null,
+      "rejected_by": null,
+      "rejected_at": "2026-01-04T21:06:07.781Z"
+    },
+    {
+      "id": 11,
+      "created_at": "2026-01-04T10:58:38.410Z",
+      "updated_at": "2026-01-05T04:27:57.320Z",
+      "project_code": "PUBLIC00001",
+      "account_code": "510112",
+      "expense_type": "วางบิล",
+      "contact": "Yuki",
+      "bill_header": "Yuki",
+      "payback_to": "Yuki",
+      "description": "YukiYukiYukiYukiYuki",
+      "bank_name": "กสิกรไทย",
+      "bank_account_number": "00000000",
+      "bank_account_name": "Yuki",
+      "phone": "000000000",
+      "email": "Yuki@gmail.com",
+      "issue_date": null,
+      "due_date": "2026-01-17T17:00:00.000Z",
+      "transfer_date": null,
+      "price": "3000.00",
+      "discount": "0.00",
+      "vat_amount": "0.00",
+      "wht_amount": "90.00",
+      "net_amount": "2910.00",
+      "internal_status": "VP อนุมัติแล้ว ส่งเบิกได้",
+      "peak_status": null,
+      "report_month": "2026-01",
+      "created_by": null,
+      "approved_by": null,
+      "approved_at": null,
+      "reject_reason": null,
+      "rejected_by": null,
+      "rejected_at": null
+    },
+    {
+      "id": 15,
+      "created_at": "2026-01-05T03:18:27.561Z",
+      "updated_at": "2026-01-05T03:25:19.294Z",
+      "project_code": "INHOUSE00004",
+      "account_code": "510112",
+      "expense_type": "วางบิล",
+      "contact": "pamu",
+      "bill_header": "DreamMoon Pamu",
+      "payback_to": "pamu",
+      "description": "TA-pamu",
+      "bank_name": "ไทยพาณิชย์",
+      "bank_account_number": "00000000",
+      "bank_account_name": "DreamMoon Pamu",
+      "phone": "000000000",
+      "email": "",
+      "issue_date": null,
+      "due_date": "2026-02-03T17:00:00.000Z",
+      "transfer_date": null,
+      "price": "3000.00",
+      "discount": "0.00",
+      "vat_amount": "0.00",
+      "wht_amount": "90.00",
+      "net_amount": "2910.00",
+      "internal_status": "ส่งเบิกแล้ว รอเอกสารตัวจริง",
+      "peak_status": null,
+      "report_month": "2026-02",
+      "created_by": null,
+      "approved_by": null,
+      "approved_at": null,
+      "reject_reason": null,
+      "rejected_by": null,
+      "rejected_at": null
+    },
+    {
+      "id": 17,
+      "created_at": "2026-01-05T03:35:25.410Z",
+      "updated_at": "2026-01-05T03:35:25.410Z",
+      "project_code": "INHOUSE00004",
+      "account_code": "510123",
+      "expense_type": "สำรองจ่าย",
+      "contact": "Shiina",
+      "bill_header": "7-11",
+      "payback_to": "Shiina",
+      "description": "coffee",
+      "bank_name": "ไทยพาณิชย์",
+      "bank_account_number": "00000000",
+      "bank_account_name": "DreamMoon Shiina",
+      "phone": "000000000",
+      "email": null,
+      "issue_date": null,
+      "due_date": "2026-02-04T17:00:00.000Z",
+      "transfer_date": null,
+      "price": "200.00",
+      "discount": "0.00",
+      "vat_amount": "0.00",
+      "wht_amount": "0.00",
+      "net_amount": "200.00",
+      "internal_status": "บัญชีตรวจ และ ได้รับเอกสารตัวจริง",
+      "peak_status": null,
+      "report_month": "2026-02",
+      "created_by": null,
+      "approved_by": null,
+      "approved_at": null,
+      "reject_reason": null,
+      "rejected_by": null,
+      "rejected_at": null
+    }
+  ],
+  "expense_attachments": [
+    {
+      "id": 6,
+      "expense_id": 7,
+      "member_doc_id": null,
+      "file_name": "Gemini_Generated_Image_qcz2l2qcz2l2qcz2.png",
+      "file_path": "uploads/expenses/1767427033326-453467393.png",
+      "source": "upload",
+      "uploaded_at": "2026-01-03T07:57:13.400Z"
+    },
+    {
+      "id": 7,
+      "expense_id": 8,
+      "member_doc_id": null,
+      "file_name": "Gemini_Generated_Image_z5lbr3z5lbr3z5lb.png",
+      "file_path": "uploads/expenses/1767427703929-855250551.png",
+      "source": "upload",
+      "uploaded_at": "2026-01-03T08:08:24.009Z"
+    },
+    {
+      "id": 8,
+      "expense_id": 9,
+      "member_doc_id": null,
+      "file_name": "Gemini_Generated_Image_w7epehw7epehw7ep.png",
+      "file_path": "uploads/expenses/1767432446982-23393723.png",
+      "source": "upload",
+      "uploaded_at": "2026-01-03T09:27:27.101Z"
+    },
+    {
+      "id": 9,
+      "expense_id": 10,
+      "member_doc_id": null,
+      "file_name": "Gemini_Generated_Image_q6k2tvq6k2tvq6k2.png",
+      "file_path": "uploads/expenses/1767458979296-184949813.png",
+      "source": "upload",
+      "uploaded_at": "2026-01-03T16:49:39.375Z"
+    },
+    {
+      "id": 10,
+      "expense_id": 10,
+      "member_doc_id": null,
+      "file_name": "Gemini_Generated_Image_97vwgq97vwgq97vw.png",
+      "file_path": "uploads/expenses/1767458979382-456931859.png",
+      "source": "upload",
+      "uploaded_at": "2026-01-03T16:49:39.446Z"
+    },
+    {
+      "id": 11,
+      "expense_id": 10,
+      "member_doc_id": null,
+      "file_name": "Gemini_Generated_Image_z5lbr3z5lbr3z5lb.png",
+      "file_path": "uploads/expenses/1767458979452-241126466.png",
+      "source": "upload",
+      "uploaded_at": "2026-01-03T16:49:39.508Z"
+    },
+    {
+      "id": 13,
+      "expense_id": 14,
+      "member_doc_id": null,
+      "file_name": "Gemini_Generated_Image_z5lbr3z5lbr3z5lb.png",
+      "file_path": "uploads/expenses/1767524819893-137061756.png",
+      "source": "upload",
+      "uploaded_at": "2026-01-04T11:06:59.955Z"
+    },
+    {
+      "id": 14,
+      "expense_id": 15,
+      "member_doc_id": null,
+      "file_name": "Gemini_Generated_Image_18ssl18ssl18ssl1.png",
+      "file_path": "uploads/expenses/1767583107583-669108149.png",
+      "source": "upload",
+      "uploaded_at": "2026-01-05T03:18:27.656Z"
+    },
+    {
+      "id": 15,
+      "expense_id": 16,
+      "member_doc_id": null,
+      "file_name": "Gemini_Generated_Image_z5lbr3z5lbr3z5lb.png",
+      "file_path": "uploads/expenses/1767583474670-726882955.png",
+      "source": "upload",
+      "uploaded_at": "2026-01-05T03:24:34.738Z"
+    },
+    {
+      "id": 16,
+      "expense_id": 17,
+      "member_doc_id": null,
+      "file_name": "Gemini_Generated_Image_qcz2l2qcz2l2qcz2.png",
+      "file_path": "uploads/expenses/1767584125419-368508853.png",
+      "source": "upload",
+      "uploaded_at": "2026-01-05T03:35:25.464Z"
+    }
+  ]
+}

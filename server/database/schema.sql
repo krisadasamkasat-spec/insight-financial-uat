@@ -1,397 +1,898 @@
--- =====================================================
--- Insight Financial - Full Database Schema
--- Version: 1.1.0
--- Generated: 2026-01-05
--- =====================================================
+--
+-- PostgreSQL database dump
+--
 
--- =====================================================
--- 1. REFERENCE DATA TABLES
--- =====================================================
+\restrict zgy1owvenSxVNcghDsFISEp05Sug0pLj9fhYfHDT8dDj0M3sX3OCqGj0ulAXUFU
 
--- Roles Table (for Team Members)
-CREATE TABLE IF NOT EXISTS roles (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) UNIQUE NOT NULL,
-    label VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Dumped from database version 18.1
+-- Dumped by pg_dump version 18.1
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- Name: public; Type: SCHEMA; Schema: -; Owner: -
+--
+
+-- *not* creating schema, since initdb creates it
+
+
+--
+-- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON SCHEMA public IS '';
+
+
+--
+-- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION pgcrypto; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
+
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: account_codes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.account_codes (
+    account_code character varying(50) NOT NULL,
+    account_description text NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
--- Project Types Table
-CREATE TABLE IF NOT EXISTS project_types (
-    id SERIAL PRIMARY KEY,
-    value VARCHAR(50) UNIQUE NOT NULL,
-    label VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+--
+-- Name: contact_documents; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.contact_documents (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    contact_id uuid,
+    document_type character varying(50) NOT NULL,
+    file_name character varying(255) NOT NULL,
+    file_path text NOT NULL,
+    file_size integer,
+    file_ext character varying(10),
+    is_active boolean DEFAULT true,
+    uploaded_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
--- Account Codes Table (รหัสค่าใช้จ่าย)
-CREATE TABLE IF NOT EXISTS account_codes (
-    code VARCHAR(50) PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+--
+-- Name: contacts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.contacts (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    entity_type character varying(20) NOT NULL,
+    tax_id character varying(13),
+    branch_code character varying(10) DEFAULT '00000'::character varying,
+    name_th character varying(255) NOT NULL,
+    name_en character varying(255),
+    nick_name character varying(100),
+    phone character varying(50) NOT NULL,
+    mobile character varying(50),
+    email character varying(255),
+    address_registration text,
+    address_shipping text,
+    bank_name character varying(100),
+    bank_account_number character varying(50),
+    bank_account_name character varying(255),
+    role character varying(100),
+    note text,
+    is_active boolean DEFAULT true,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT contacts_entity_type_check CHECK (((entity_type)::text = ANY ((ARRAY['individual'::character varying, 'juristic'::character varying])::text[])))
 );
 
--- =====================================================
--- 2. CORE BUSINESS TABLES
--- =====================================================
 
--- Users Table
-CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    username VARCHAR(255) UNIQUE,
-    email VARCHAR(255) UNIQUE,
-    password_hash VARCHAR(255),
-    full_name VARCHAR(255),
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+--
+-- Name: expense_attachments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.expense_attachments (
+    id integer NOT NULL,
+    expense_id integer,
+    file_name character varying(255),
+    file_path character varying(500) NOT NULL,
+    source character varying(50),
+    uploaded_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
--- Products Table
-CREATE TABLE IF NOT EXISTS products (
-    code VARCHAR(50) PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    category VARCHAR(100),
-    description TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+--
+-- Name: expense_attachments_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.expense_attachments_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: expense_attachments_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.expense_attachments_id_seq OWNED BY public.expense_attachments.id;
+
+
+--
+-- Name: expense_lists; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.expense_lists (
+    id integer NOT NULL,
+    project_code character varying(50),
+    account_code character varying(50),
+    expense_type character varying(100),
+    contact character varying(255),
+    bill_header character varying(255),
+    payback_to character varying(255),
+    description text,
+    phone character varying(50),
+    email character varying(255),
+    bank_name character varying(100),
+    bank_account_number character varying(50),
+    bank_account_name character varying(255),
+    amount numeric(15,2),
+    discount numeric(15,2) DEFAULT 0,
+    vat numeric(5,2) DEFAULT 0,
+    vat_amount numeric(15,2) DEFAULT 0,
+    wht numeric(5,2) DEFAULT 0,
+    wht_amount numeric(15,2) DEFAULT 0,
+    net_amount numeric(15,2),
+    issue_date date,
+    due_date date,
+    internal_status character varying(50) DEFAULT 'Draft'::character varying,
+    created_by integer,
+    updated_by integer,
+    approved_by integer,
+    approved_at timestamp without time zone,
+    rejected_by integer,
+    rejected_at timestamp without time zone,
+    reject_reason text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
--- Team Members Table
-CREATE TABLE IF NOT EXISTS team_members (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    nickname VARCHAR(100),
-    type VARCHAR(50),
-    email VARCHAR(255),
-    phone VARCHAR(50),
-    bank_account VARCHAR(50),
-    bank_name VARCHAR(100),
-    tax_id VARCHAR(20),
-    is_company BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+--
+-- Name: expense_lists_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.expense_lists_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: expense_lists_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.expense_lists_id_seq OWNED BY public.expense_lists.id;
+
+
+--
+-- Name: financial_accounts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.financial_accounts (
+    id integer NOT NULL,
+    bank_name character varying(100),
+    financial_account_number character varying(50),
+    financial_account_name character varying(255),
+    balance numeric(15,2) DEFAULT 0,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
--- Member Documents Table
-CREATE TABLE IF NOT EXISTS member_documents (
-    id SERIAL PRIMARY KEY,
-    member_id INTEGER REFERENCES team_members(id) ON DELETE CASCADE,
-    doc_type VARCHAR(100),
-    file_name VARCHAR(255) NOT NULL,
-    file_path VARCHAR(500) NOT NULL,
-    is_active BOOLEAN DEFAULT TRUE,
-    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+--
+-- Name: financial_accounts_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.financial_accounts_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: financial_accounts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.financial_accounts_id_seq OWNED BY public.financial_accounts.id;
+
+
+--
+-- Name: income_attachments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.income_attachments (
+    id integer NOT NULL,
+    income_id integer,
+    file_name character varying(255),
+    file_path character varying(500) NOT NULL,
+    source character varying(50),
+    uploaded_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
--- Product Categories Table
-CREATE TABLE IF NOT EXISTS product_categories (
-    id SERIAL PRIMARY KEY,
-    code VARCHAR(50) UNIQUE NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+--
+-- Name: income_attachments_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.income_attachments_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: income_attachments_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.income_attachments_id_seq OWNED BY public.income_attachments.id;
+
+
+--
+-- Name: income_lists; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.income_lists (
+    id integer NOT NULL,
+    project_code character varying(50),
+    amount numeric(15,2),
+    description text,
+    financial_account_id integer,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    due_date date,
+    status character varying(20) DEFAULT 'pending'::character varying
 );
 
--- =====================================================
--- 3. PROJECT MANAGEMENT TABLES
--- =====================================================
 
--- Projects Table
-CREATE TABLE IF NOT EXISTS projects (
-    project_code VARCHAR(50) PRIMARY KEY,
-    project_name VARCHAR(255) NOT NULL,
-    product_code VARCHAR(50) REFERENCES products(code),
-    customer_name VARCHAR(255),
-    status VARCHAR(50) DEFAULT 'Active',
-    project_type VARCHAR(50),
-    start_date DATE,
-    end_date DATE,
-    location VARCHAR(255),
-    description TEXT,
-    budget NUMERIC(15, 2),
-    participant_count INTEGER,
-    created_by INTEGER REFERENCES users(id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+--
+-- Name: income_lists_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.income_lists_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: income_lists_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.income_lists_id_seq OWNED BY public.income_lists.id;
+
+
+--
+-- Name: product_categories; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.product_categories (
+    id integer NOT NULL,
+    name character varying(255) NOT NULL,
+    code_prefix character varying(50),
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
--- Project Team Junction Table
-CREATE TABLE IF NOT EXISTS project_team (
-    id SERIAL PRIMARY KEY,
-    project_code VARCHAR(50) REFERENCES projects(project_code) ON DELETE CASCADE,
-    member_id INTEGER REFERENCES team_members(id),
-    role VARCHAR(100),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+--
+-- Name: product_categories_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.product_categories_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: product_categories_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.product_categories_id_seq OWNED BY public.product_categories.id;
+
+
+--
+-- Name: products; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.products (
+    product_code character varying(50) NOT NULL,
+    product_category_id integer,
+    product_name character varying(255) NOT NULL,
+    description text,
+    is_active boolean DEFAULT true,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================
--- 4. FINANCIAL TABLES
--- =====================================================
 
--- Financial Accounts Table
-CREATE TABLE IF NOT EXISTS financial_accounts (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    type VARCHAR(50),
-    account_number VARCHAR(50),
-    bank_code VARCHAR(20),
-    balance NUMERIC(15, 2) DEFAULT 0,
-    color VARCHAR(20),
-    is_primary BOOLEAN DEFAULT FALSE,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+--
+-- Name: project_dates; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_dates (
+    id integer CONSTRAINT project_dates_id_not_null1 NOT NULL,
+    project_code character varying(50),
+    date_name character varying(255),
+    start_date timestamp without time zone CONSTRAINT project_dates_start_date_not_null1 NOT NULL,
+    end_date timestamp without time zone,
+    location character varying(255),
+    description text,
+    created_by integer,
+    updated_by integer,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
--- Incomes Table
-CREATE TABLE IF NOT EXISTS incomes (
-    id SERIAL PRIMARY KEY,
-    project_code VARCHAR(50) REFERENCES projects(project_code),
-    description TEXT,
-    invoice_no VARCHAR(100),
-    date DATE,
-    amount NUMERIC(15, 2),
-    status VARCHAR(50) DEFAULT 'pending',
-    account_id INTEGER REFERENCES financial_accounts(id),
-    created_by INTEGER REFERENCES users(id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+--
+-- Name: project_dates_id_seq1; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.project_dates_id_seq1
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: project_dates_id_seq1; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.project_dates_id_seq1 OWNED BY public.project_dates.id;
+
+
+--
+-- Name: project_types; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_types (
+    id integer NOT NULL,
+    name character varying(255) NOT NULL,
+    label character varying(255),
+    code_prefix character varying(50),
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
--- Expenses Table
-CREATE TABLE IF NOT EXISTS expenses (
-    id SERIAL PRIMARY KEY,
-    account_code VARCHAR(50) REFERENCES account_codes(code),
-    project_code VARCHAR(50) REFERENCES projects(project_code),
-    expense_type VARCHAR(100),
-    contact VARCHAR(255),
-    bill_header VARCHAR(255),
-    payback_to VARCHAR(255),
-    description TEXT,
-    bank_name VARCHAR(100),
-    bank_account_number VARCHAR(50),
-    bank_account_name VARCHAR(255),
-    phone VARCHAR(50),
-    email VARCHAR(255),
-    price NUMERIC(15, 2),
-    discount NUMERIC(15, 2) DEFAULT 0,
-    vat_amount NUMERIC(15, 2) DEFAULT 0,
-    wht_amount NUMERIC(15, 2) DEFAULT 0,
-    net_amount NUMERIC(15, 2),
-    due_date DATE,
-    internal_status VARCHAR(100),
-    peak_status VARCHAR(100),
-    report_month VARCHAR(50),
-    issue_date DATE,
-    account_id INTEGER REFERENCES financial_accounts(id),
-    file_path VARCHAR(500),
-    created_by INTEGER REFERENCES users(id),
-    approved_by INTEGER REFERENCES users(id),
-    approved_at TIMESTAMP,
-    reject_reason TEXT,
-    rejected_by INTEGER REFERENCES users(id),
-    rejected_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+--
+-- Name: project_types_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.project_types_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: project_types_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.project_types_id_seq OWNED BY public.project_types.id;
+
+
+--
+-- Name: projects; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.projects (
+    project_code character varying(50) NOT NULL,
+    project_type_id integer,
+    project_name character varying(255),
+    product_code character varying(50),
+    customer_name character varying(255),
+    participant_count integer,
+    budget numeric(15,2),
+    description text,
+    status character varying(50) DEFAULT 'Active'::character varying,
+    created_by integer,
+    updated_by integer,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
--- Expense Attachments Table
-CREATE TABLE IF NOT EXISTS expense_attachments (
-    id SERIAL PRIMARY KEY,
-    expense_id INTEGER REFERENCES expenses(id) ON DELETE CASCADE,
-    file_name VARCHAR(255) NOT NULL,
-    file_path VARCHAR(500) NOT NULL,
-    source VARCHAR(50) DEFAULT 'upload',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.users (
+    id integer NOT NULL,
+    username character varying(255) NOT NULL,
+    password_hash character varying(255),
+    name character varying(255) NOT NULL,
+    role character varying(50) NOT NULL,
+    is_active boolean DEFAULT true,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================
--- 5. SEED REFERENCE DATA
--- =====================================================
 
--- Seed Roles
-INSERT INTO roles (name, label) VALUES
-('Trainer', 'Trainer'),
-('Co-Trainer', 'Co-Trainer'),
-('MC', 'MC (Master of Ceremony)'),
-('TA', 'Training Assistant (TA)'),
-('Coordinator', 'Training Coordinator'),
-('TMT', 'Training Management Team (TMT)')
-ON CONFLICT (name) DO NOTHING;
+--
+-- Name: users_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
 
--- Seed Project Types
-INSERT INTO project_types (value, label) VALUES
-('Consult', 'Consult'),
-('In-House', 'In-House'),
-('Public', 'Public'),
-('Event', 'Event'),
-('Gift', 'Gift'),
-('R&D', 'R&D'),
-('Other', 'Other')
-ON CONFLICT (value) DO NOTHING;
+CREATE SEQUENCE public.users_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
 
 
+--
+-- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
 
--- Seed Account Codes (รหัสค่าใช้จ่าย)
-INSERT INTO account_codes (code, title, description) VALUES
--- ต้นทุนการจัดอบรม (510xxx)
-('510110', 'ต้นทุนเทรนเนอร์ /Cost of Trainer', 'ต้นทุนการจัดอบรม'),
-('510111', 'ต้นทุน Co-Trainer /Cost of Co-Trainer', 'ต้นทุนการจัดอบรม'),
-('510112', 'ต้นทุน MC Cost of MC', 'ต้นทุนการจัดอบรม'),
-('510113', 'ต้นทุน TA /Cost of TA', 'ต้นทุนการจัดอบรม'),
-('510114', 'ต้นทุน Training Coordinator', 'ต้นทุนการจัดอบรม'),
-('510115', 'ต้นทุนทีม Light & Sound', 'ต้นทุนการจัดอบรม'),
-('510116', 'ต้นทุนเอกสารประกอบจัดอบรม /Cost of Training Document', 'ต้นทุนการจัดอบรม'),
-('510117', 'ต้นทุนอุปกรณ์แจกเพื่อส่วนหนึ่งอบรม /Cost of Training Others', 'ต้นทุนการจัดอบรม'),
-('510118', 'ต้นทุนของรางวัลในการอบรม /Prize or reward expenses', 'ต้นทุนการจัดอบรม'),
-('510119', 'ต้นทุนช่างภาพนิ่ง /Production Cost', 'ต้นทุนการจัดอบรม'),
-('510120', 'ต้นทุนช่างภาพวิดิโอ /Production VDO Cost', 'ต้นทุนการจัดอบรม'),
-('510121', 'ต้นทุนทีมถ่ายทำ / ตัดต่อ คอร์สออนไลน์', 'ต้นทุนการจัดอบรม'),
-('510122', 'ต้นทุนค่าสถานที่ / ห้องสัมมนา /Cost of Location', 'ต้นทุนการจัดอบรม'),
-('510123', 'ต้นทุนค่าอาหาร / กาแฟ วิทยากร /Cost of food (trainer)', 'ต้นทุนการจัดอบรม'),
-('510124', 'ต้นทุนค่าลิขสิทธ์หลักสูตร /Course license costs', 'ต้นทุนการจัดอบรม'),
-('510125', 'ต้นทุนค่าเดินทาง / ที่พัก /Transportation Cost', 'ต้นทุนการจัดอบรม'),
-('510126', 'ต้นทุน ส่งของหน้างาน วางบิล /Messenger', 'ต้นทุนการจัดอบรม'),
-('510127', 'ต้นทุนคอร์สออนไลน์ E-Learning /Platform E-Learning', 'ต้นทุนการจัดอบรม'),
-('510128', 'ต้นทุนอื่นๆ /Others', 'ต้นทุนการจัดอบรม'),
-('510129', 'ต้นทุน TMT', 'ต้นทุนการจัดอบรม'),
--- ค่าใช้จ่ายในการขาย (520xxx)
-('520103', 'เงินเดือน-พนักงานขาย /Sales Salary', 'ค่าใช้จ่ายในการขาย'),
-('520104', 'ค่านายหน้าพนักงาน /Sales commission', 'ค่าใช้จ่ายในการขาย'),
-('520105', 'โบนัส-พนักงานขาย /Bonus on sales', 'ค่าใช้จ่ายในการขาย'),
-('520106', 'Commission Partners', 'ค่าใช้จ่ายในการขาย'),
-('520219', 'ค่าจ้างที่ปรึกษาการขาย /Sales consulting service expenses', 'ค่าใช้จ่ายในการขาย'),
-('520220', 'ค่าจ้างที่ปรึกษาการตลาด /Marketing consulting service expenses', 'ค่าใช้จ่ายในการขาย'),
-('520221', 'ค่าออกแบบและผลิตสื่อชิ้นงาน /Design cost', 'ค่าใช้จ่ายในการขาย'),
-('520222', 'ค่าออกบูธและทีมงานออกบูธ /Space rental and event related expenses', 'ค่าใช้จ่ายในการขาย'),
-('520223', 'BNI /Business Network International', 'ค่าใช้จ่ายในการขาย'),
-('520224', 'ค่าเขียน Content และ Graphic /Content Creating Cost', 'ค่าใช้จ่ายในการขาย'),
-('520225', 'ค่าจ้างทำเว็บ และ SEO /Website and SEO Cost', 'ค่าใช้จ่ายในการขาย'),
-('520226', 'ค่า Ads Facebook / Instagram', 'ค่าใช้จ่ายในการขาย'),
-('520227', 'ค่า Ads Google / Youtube', 'ค่าใช้จ่ายในการขาย'),
-('520228', 'ค่า Ads Tiktok', 'ค่าใช้จ่ายในการขาย'),
-('520229', 'ค่า LINE OA', 'ค่าใช้จ่ายในการขาย'),
-('520230', 'ค่า Marketing Social Media /Advertising media production cost', 'ค่าใช้จ่ายในการขาย'),
-('520310', 'ค่าโทรศัพท์พนักขาย /Sales communication expenses', 'ค่าใช้จ่ายในการขาย'),
-('520311', 'ค่าเดินทาง/ค่าพาหนะพนักงาน /Travel allowance expenses', 'ค่าใช้จ่ายในการขาย'),
-('520312', 'สวัสดิการพนักงานขายอื่น /Other sales staff welfare', 'ค่าใช้จ่ายในการขาย'),
-('520313', 'ค่าของขวัญตามเทศกาลให้ลูกค้า /Cost of gifts', 'ค่าใช้จ่ายในการขาย'),
-('520314', 'ค่าเลี้ยงรับรองลูกค้า /Entertainment and gift expenses', 'ค่าใช้จ่ายในการขาย'),
-('520315', 'ค่าจ้างพนักงาน PR', 'ค่าใช้จ่ายในการขาย'),
-('520316', 'ค่าใช้จ่ายในการขายอื่นๆ /Others on sales cost', 'ค่าใช้จ่ายในการขาย'),
--- ค่าใช้จ่ายในการบริหาร (530xxx)
-('530116', 'เงินเดือน /Wages and salary', 'ค่าใช้จ่ายในการบริหาร'),
-('530117', 'โบนัส /Bonus', 'ค่าใช้จ่ายในการบริหาร'),
-('530213', 'ค่าโทรศัพท์ สำนักงาน /Utility expenses - telephone', 'ค่าใช้จ่ายในการบริหาร'),
-('530214', 'สวัสดิการพนักงาน /Other welfare expenses', 'ค่าใช้จ่ายในการบริหาร'),
-('530215', 'ค่าเช่าห้องประชุมภายใน /Meeting Room', 'ค่าใช้จ่ายในการบริหาร'),
-('530216', 'ค่าเช่าห้องประชุมรายเดือน /Meeting Room', 'ค่าใช้จ่ายในการบริหาร'),
-('530217', 'ค่าส่ง/ไปรษณีย์(ที่ไม่ใช่เอกสาร)', 'ค่าใช้จ่ายในการบริหาร'),
-('530218', 'ค่าเครื่องเขียน/วัสดุอุปกรณ์ /Stationery and supplies expenses', 'ค่าใช้จ่ายในการบริหาร'),
-('530307', 'ค่าสาธารณูปโภค /Utilities', 'ค่าใช้จ่ายในการบริหาร'),
-('530409', 'ค่าที่ปรึกษาธุรกิจ', 'ค่าใช้จ่ายในการบริหาร'),
-('530410', 'ค่าทำบัญชี /service expenses - bookkeeping', 'ค่าใช้จ่ายในการบริหาร'),
-('530411', 'ค่าสอบบัญชี /service expenses - auditing fee', 'ค่าใช้จ่ายในการบริหาร'),
-('530412', 'System Support (App, ChatGPT)', 'ค่าใช้จ่ายในการบริหาร'),
-('530413', 'System Development', 'ค่าใช้จ่ายในการบริหาร'),
-('530414', 'ค่าจ้างทำของ /Hire of work expenses', 'ค่าใช้จ่ายในการบริหาร'),
-('530415', 'ค่าอบรมพัฒนาพนักงาน /Training seminar', 'ค่าใช้จ่ายในการบริหาร'),
-('530416', 'ค่าจ้างจัดทำเและตรวจสอบบัญชี', 'ค่าใช้จ่ายในการบริหาร'),
-('530417', 'ค่าจ้างวิจัยและออกแบบหลักสูตร /R&D personel cost', 'ค่าใช้จ่ายในการบริหาร'),
-('530418', 'ค่าจ้างฝ่ายกฏหมาย /สัญญา', 'ค่าใช้จ่ายในการบริหาร')
-ON CONFLICT (code) DO NOTHING;
+ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
 
--- Seed Products (หลักสูตร - Actual Data)
-INSERT INTO products (code, name, category, description, is_active) VALUES
--- Advance AI Products
-('ADVAI-BUILD-AI', 'Build Your AI - Customize AI Empire & Army for Business', 'ADVAI', 'Advance AI', TRUE),
-('ADVAI-CONTENT', 'Advance AI for Creative Content Creation Across Digital Platform', 'ADVAI', 'Advance AI', TRUE),
-('ADVAI-GITHUB', 'Advance AI GitHub Copilot', 'ADVAI', 'Advance AI', TRUE),
-('ADVAI-MKT-STRATEGY', 'Advance AI for Marketing Strategy', 'ADVAI', 'Advance AI', TRUE),
-('ADVAI-MKT-STUDIO', 'Advance AI for Marketing Studio', 'ADVAI', 'Advance AI', TRUE),
-('ADVAI-PRESENT', 'The Magic of AI Presentation', 'ADVAI', 'Advance AI', TRUE),
-('ADVAI-PRODUCTIVITY', 'Advance AI Tools for Future Work', 'ADVAI', 'Advance AI', TRUE),
-('ADVAI-RESEARCH', 'Advance AI For Business Research and Strategy Analysis', 'ADVAI', 'Advance AI', TRUE),
-('ADVAI-RPA', 'Advance AI Automation with RPA', 'ADVAI', 'Advance AI', TRUE),
-('ADVAI-TIME-MGMT', 'AI for Time & Prioritize Management', 'ADVAI', 'Advance AI', TRUE),
-('ADVAI-WORKFLOW', 'Advance AI Automation Workflow', 'ADVAI', 'Advance AI', TRUE),
--- Other Products
-('CANVA', 'Canva for Business', 'OTHER', 'อื่นๆ', TRUE),
--- Generative AI Products
-('GENAI', 'Generative AI for All Level', 'GENAI', 'Generative AI', TRUE),
-('GENAI-BIZ', 'Generative AI for Business Transformation & Future Trends', 'GENAI', 'Generative AI', TRUE),
-('GENAI-EXECUTIVE', 'Generative AI for Executive', 'GENAI', 'Generative AI', TRUE),
-('GENAI-FIELD', 'Generative AI for Future Field Service', 'GENAI', 'Generative AI', TRUE),
-('GENAI-FINANCE', 'Generative AI for Finance', 'GENAI', 'Generative AI', TRUE),
-('GENAI-HALF', 'Generative AI for All Level - Half day', 'GENAI', 'Generative AI', TRUE),
-('GENAI-HR', 'Generative AI for HR', 'GENAI', 'Generative AI', TRUE),
-('GENAI-MKT', 'Generative AI for Marketing', 'GENAI', 'Generative AI', TRUE),
-('GENAI-OPERATION', 'Generative AI for Operation', 'GENAI', 'Generative AI', TRUE),
-('GENAI-RISK', 'Generative AI for Risk Management', 'GENAI', 'Generative AI', TRUE),
-('GENAI-SALES', 'Generative AI for Sales', 'GENAI', 'Generative AI', TRUE),
-('GENAI-TOWNHALL', 'Generative AI for All Level - Townhall', 'GENAI', 'Generative AI', TRUE),
--- More Other Products
-('IMPT-PITCHING', 'Impact Pitch for Sales', 'OTHER', 'อื่นๆ', TRUE),
-('INS-DATA-ANALYTIC', 'Data Analytic And Visualization Made Easy With AI', 'OTHER', 'อื่นๆ', TRUE),
--- Journey Programs
-('JOURNEY-AI-EXEC', '[Journey] AI for Executive Journey', 'JOURNEY', 'Journey Programs', TRUE),
-('JOURNEY-AI-MENTOR', '[Journey] AI Mentoring Program', 'JOURNEY', 'Journey Programs', TRUE),
-('JOURNEY-AI-TRANSFORM', '[Journey] AI Transformation Program', 'JOURNEY', 'Journey Programs', TRUE),
-('JOURNEY-GOAL', '[Journey] Design Your Goal & Work Life Balance', 'JOURNEY', 'Journey Programs', TRUE),
-('JOURNEY-ORG-LEADER', '[Journey] Organizational - Leadershift', 'JOURNEY', 'Journey Programs', TRUE),
-('JOURNEY-PEOPLE', '[Journey] Become the Person Everyone Loves to Work With', 'JOURNEY', 'Journey Programs', TRUE),
-('JOURNEY-SELF-LEADER', '[Journey] SELF - Leadershift', 'JOURNEY', 'Journey Programs', TRUE),
-('JOURNEY-TEAM-LEADER', '[Journey] TEAM - Leadershift', 'JOURNEY', 'Journey Programs', TRUE),
-('JOURNEY-TIME', '[Journey] Master Your Time', 'JOURNEY', 'Journey Programs', TRUE),
-('JOURNEY-TRAINER', '[Journey] Transformative Trainer', 'JOURNEY', 'Journey Programs', TRUE),
--- More Other Products
-('LOGIC', 'Business Logical Thinking In The Age of AI', 'OTHER', 'อื่นๆ', TRUE),
-('PNEGO', 'Psychological Negotiation Tactics (With AI Assistance)', 'OTHER', 'อื่นๆ', TRUE),
-('POC-MENTOR', 'Project Mentoring (POC)', 'OTHER', 'อื่นๆ', TRUE),
-('PPTDE', 'Psychology of Presentation Design', 'OTHER', 'อื่นๆ', TRUE),
-('SALE-AJBALLY', 'Sale by AjBally', 'OTHER', 'อื่นๆ', TRUE),
--- Skills Beyond AI Products
-('SKLBEYOND-COMMU', 'Communication', 'SKLBEYOND', 'Skills Beyond AI', TRUE),
-('SKLBEYOND-COMMU-PRESENT', 'Insight-Driven Powerful Presentation', 'SKLBEYOND', 'Skills Beyond AI', TRUE),
-('SKLBEYOND-CRITICAL', 'Critical Thinking', 'SKLBEYOND', 'Skills Beyond AI', TRUE),
-('SKLBEYOND-DT-AI', 'Design Thinking + AI', 'SKLBEYOND', 'Skills Beyond AI', TRUE),
-('SKLBEYOND-TEAM-MGMT', 'Team Management', 'SKLBEYOND', 'Skills Beyond AI', TRUE),
-('SKLBEYOND-THINK-DESIGN', 'Design Thinking', 'SKLBEYOND', 'Skills Beyond AI', TRUE),
--- More Other Products
-('TIMEP', 'Time & Prioritize Psychology Management', 'OTHER', 'อื่นๆ', TRUE),
--- Training Products
-('TRAIN-ITEQUIP', 'หยุดตบตี อุปกรณ์ IT ในห้องเรียน', 'TRAIN', 'Training', TRUE),
-('TRAIN-LED', 'LED Workshop Design', 'TRAIN', 'Training', TRUE),
-('TRAIN-TRANSFORMATIVE', 'Become Transformative Trainer', 'TRAIN', 'Training', TRUE),
-('TRAIN-WOWFA', 'Wow Facilitator', 'TRAIN', 'Training', TRUE)
-ON CONFLICT (code) DO NOTHING;
 
--- Seed Default User (required for foreign key references)
-INSERT INTO users (id, username, email, full_name, is_active) VALUES
-(1, 'system', 'system@insight-financial.com', 'System User', TRUE)
-ON CONFLICT (id) DO NOTHING;
+--
+-- Name: expense_attachments id; Type: DEFAULT; Schema: public; Owner: -
+--
 
--- Reset sequence for users table
-SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));
+ALTER TABLE ONLY public.expense_attachments ALTER COLUMN id SET DEFAULT nextval('public.expense_attachments_id_seq'::regclass);
 
--- =====================================================
--- 6. CREATE INDEXES FOR PERFORMANCE
--- =====================================================
 
-CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
-CREATE INDEX IF NOT EXISTS idx_projects_project_type ON projects(project_type);
-CREATE INDEX IF NOT EXISTS idx_incomes_project_code ON incomes(project_code);
-CREATE INDEX IF NOT EXISTS idx_incomes_status ON incomes(status);
-CREATE INDEX IF NOT EXISTS idx_expenses_project_code ON expenses(project_code);
-CREATE INDEX IF NOT EXISTS idx_expenses_status ON expenses(status);
-CREATE INDEX IF NOT EXISTS idx_project_team_project ON project_team(project_code);
-CREATE INDEX IF NOT EXISTS idx_project_team_member ON project_team(member_id);
+--
+-- Name: expense_lists id; Type: DEFAULT; Schema: public; Owner: -
+--
 
--- =====================================================
--- DONE! Database schema created successfully.
--- =====================================================
+ALTER TABLE ONLY public.expense_lists ALTER COLUMN id SET DEFAULT nextval('public.expense_lists_id_seq'::regclass);
+
+
+--
+-- Name: financial_accounts id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.financial_accounts ALTER COLUMN id SET DEFAULT nextval('public.financial_accounts_id_seq'::regclass);
+
+
+--
+-- Name: income_attachments id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.income_attachments ALTER COLUMN id SET DEFAULT nextval('public.income_attachments_id_seq'::regclass);
+
+
+--
+-- Name: income_lists id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.income_lists ALTER COLUMN id SET DEFAULT nextval('public.income_lists_id_seq'::regclass);
+
+
+--
+-- Name: product_categories id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_categories ALTER COLUMN id SET DEFAULT nextval('public.product_categories_id_seq'::regclass);
+
+
+--
+-- Name: project_dates id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_dates ALTER COLUMN id SET DEFAULT nextval('public.project_dates_id_seq1'::regclass);
+
+
+--
+-- Name: project_types id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_types ALTER COLUMN id SET DEFAULT nextval('public.project_types_id_seq'::regclass);
+
+
+--
+-- Name: users id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
+
+
+--
+-- Name: account_codes account_codes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.account_codes
+    ADD CONSTRAINT account_codes_pkey PRIMARY KEY (account_code);
+
+
+--
+-- Name: contact_documents contact_documents_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contact_documents
+    ADD CONSTRAINT contact_documents_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: contacts contacts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contacts
+    ADD CONSTRAINT contacts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: expense_attachments expense_attachments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.expense_attachments
+    ADD CONSTRAINT expense_attachments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: expense_lists expense_lists_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.expense_lists
+    ADD CONSTRAINT expense_lists_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: financial_accounts financial_accounts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.financial_accounts
+    ADD CONSTRAINT financial_accounts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: income_attachments income_attachments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.income_attachments
+    ADD CONSTRAINT income_attachments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: income_lists income_lists_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.income_lists
+    ADD CONSTRAINT income_lists_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: product_categories product_categories_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_categories
+    ADD CONSTRAINT product_categories_name_key UNIQUE (name);
+
+
+--
+-- Name: product_categories product_categories_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_categories
+    ADD CONSTRAINT product_categories_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: products products_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.products
+    ADD CONSTRAINT products_pkey PRIMARY KEY (product_code);
+
+
+--
+-- Name: project_dates project_dates_pkey1; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_dates
+    ADD CONSTRAINT project_dates_pkey1 PRIMARY KEY (id);
+
+
+--
+-- Name: project_types project_types_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_types
+    ADD CONSTRAINT project_types_name_key UNIQUE (name);
+
+
+--
+-- Name: project_types project_types_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_types
+    ADD CONSTRAINT project_types_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: projects projects_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.projects
+    ADD CONSTRAINT projects_pkey PRIMARY KEY (project_code);
+
+
+--
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: users users_username_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_username_key UNIQUE (username);
+
+
+--
+-- Name: idx_contact_docs_contact; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_contact_docs_contact ON public.contact_documents USING btree (contact_id);
+
+
+--
+-- Name: idx_contacts_entity_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_contacts_entity_type ON public.contacts USING btree (entity_type);
+
+
+--
+-- Name: idx_contacts_name_th; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_contacts_name_th ON public.contacts USING btree (name_th);
+
+
+--
+-- Name: idx_contacts_phone; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_contacts_phone ON public.contacts USING btree (phone);
+
+
+--
+-- Name: idx_contacts_tax_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_contacts_tax_id ON public.contacts USING btree (tax_id);
+
+
+--
+-- Name: idx_expense_project; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_expense_project ON public.expense_lists USING btree (project_code);
+
+
+--
+-- Name: idx_income_project; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_income_project ON public.income_lists USING btree (project_code);
+
+
+--
+-- Name: idx_projects_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_projects_code ON public.projects USING btree (project_code);
+
+
+--
+-- Name: contact_documents contact_documents_contact_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contact_documents
+    ADD CONSTRAINT contact_documents_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contacts(id) ON DELETE CASCADE;
+
+
+--
+-- Name: expense_attachments expense_attachments_expense_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.expense_attachments
+    ADD CONSTRAINT expense_attachments_expense_id_fkey FOREIGN KEY (expense_id) REFERENCES public.expense_lists(id) ON DELETE CASCADE;
+
+
+--
+-- Name: expense_lists expense_lists_account_code_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.expense_lists
+    ADD CONSTRAINT expense_lists_account_code_fkey FOREIGN KEY (account_code) REFERENCES public.account_codes(account_code);
+
+
+--
+-- Name: expense_lists expense_lists_approved_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.expense_lists
+    ADD CONSTRAINT expense_lists_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES public.users(id);
+
+
+--
+-- Name: expense_lists expense_lists_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.expense_lists
+    ADD CONSTRAINT expense_lists_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id);
+
+
+--
+-- Name: expense_lists expense_lists_project_code_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.expense_lists
+    ADD CONSTRAINT expense_lists_project_code_fkey FOREIGN KEY (project_code) REFERENCES public.projects(project_code);
+
+
+--
+-- Name: expense_lists expense_lists_rejected_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.expense_lists
+    ADD CONSTRAINT expense_lists_rejected_by_fkey FOREIGN KEY (rejected_by) REFERENCES public.users(id);
+
+
+--
+-- Name: expense_lists expense_lists_updated_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.expense_lists
+    ADD CONSTRAINT expense_lists_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.users(id);
+
+
+--
+-- Name: income_attachments income_attachments_income_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.income_attachments
+    ADD CONSTRAINT income_attachments_income_id_fkey FOREIGN KEY (income_id) REFERENCES public.income_lists(id) ON DELETE CASCADE;
+
+
+--
+-- Name: income_lists income_lists_financial_account_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.income_lists
+    ADD CONSTRAINT income_lists_financial_account_id_fkey FOREIGN KEY (financial_account_id) REFERENCES public.financial_accounts(id);
+
+
+--
+-- Name: income_lists income_lists_project_code_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.income_lists
+    ADD CONSTRAINT income_lists_project_code_fkey FOREIGN KEY (project_code) REFERENCES public.projects(project_code);
+
+
+--
+-- Name: products products_product_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.products
+    ADD CONSTRAINT products_product_category_id_fkey FOREIGN KEY (product_category_id) REFERENCES public.product_categories(id);
+
+
+--
+-- Name: project_dates project_dates_created_by_fkey1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_dates
+    ADD CONSTRAINT project_dates_created_by_fkey1 FOREIGN KEY (created_by) REFERENCES public.users(id);
+
+
+--
+-- Name: project_dates project_dates_project_code_fkey1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_dates
+    ADD CONSTRAINT project_dates_project_code_fkey1 FOREIGN KEY (project_code) REFERENCES public.projects(project_code) ON DELETE CASCADE;
+
+
+--
+-- Name: project_dates project_dates_updated_by_fkey1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_dates
+    ADD CONSTRAINT project_dates_updated_by_fkey1 FOREIGN KEY (updated_by) REFERENCES public.users(id);
+
+
+--
+-- Name: projects projects_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.projects
+    ADD CONSTRAINT projects_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id);
+
+
+--
+-- Name: projects projects_product_code_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.projects
+    ADD CONSTRAINT projects_product_code_fkey FOREIGN KEY (product_code) REFERENCES public.products(product_code);
+
+
+--
+-- Name: projects projects_project_type_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.projects
+    ADD CONSTRAINT projects_project_type_id_fkey FOREIGN KEY (project_type_id) REFERENCES public.project_types(id);
+
+
+--
+-- Name: projects projects_updated_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.projects
+    ADD CONSTRAINT projects_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.users(id);
+
+
+--
+-- PostgreSQL database dump complete
+--
+
+\unrestrict zgy1owvenSxVNcghDsFISEp05Sug0pLj9fhYfHDT8dDj0M3sX3OCqGj0ulAXUFU
+

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { FolderKanban, DollarSign, CreditCard, Clock, FolderOpen, BarChart3, Calendar, MapPin, Building } from 'lucide-react';
 import { projectAPI } from '../services/api';
 import { formatNumber } from '../utils/formatters';
+import CashflowCalendar from '../components/dashboard/CashflowCalendar';
 
 
 const Dashboard = () => {
@@ -92,6 +93,11 @@ const Dashboard = () => {
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* Weekly Cashflow Dashboard */}
+            <div className="mb-8">
+                <CashflowCalendar />
             </div>
 
             {/* Quick Links & Recent Projects */}

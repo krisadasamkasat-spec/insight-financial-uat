@@ -46,21 +46,15 @@ export const projectAPI = {
     updateCategory: (code, data) => api.put(`/products/categories/${code}`, data),
     deleteCategory: (code) => api.delete(`/products/categories/${code}`),
 
-    // Members
-    getAllMembers: () => api.get('/members'),
-    createMember: (data) => api.post('/members', data),
-    updateMember: (id, data) => api.put(`/members/${id}`, data),
-    deleteMember: (id) => api.delete(`/members/${id}`),
+    // Projects
     getAllProjects: () => api.get('/projects'),
     getProject: (projectCode) => api.get(`/projects/${projectCode}`),
     createProject: (projectData) => api.post('/projects', projectData),
     updateProject: (projectCode, data) => api.put(`/projects/${projectCode}`, data),
     deleteProject: (projectCode) => api.delete(`/projects/${projectCode}`),
 
-    // Project Team
-    addTeamMember: (projectCode, data) => api.post(`/projects/${projectCode}/team`, data),
-    updateTeamMember: (projectCode, memberId, data) => api.put(`/projects/${projectCode}/team/${memberId}`, data),
-    removeTeamMember: (projectCode, memberId) => api.delete(`/projects/${projectCode}/team/${memberId}`),
+    // Project Dates
+    deleteProjectDate: (dateId) => api.delete(`/projects/dates/${dateId}`),
 
     // Incomes
     getAllIncomes: () => api.get('/incomes'),
@@ -81,10 +75,8 @@ export const projectAPI = {
 
     // Dashboard
     getDashboardStats: () => api.get('/dashboard/stats'),
+    getYearlyCashflow: (year) => api.get(`/dashboard/cashflow-yearly?year=${year || ''}`),
 
-    // Reports
-    getReportYears: () => api.get('/reports/available-years'),
-    getReportSummary: (year) => api.get(`/reports/summary?year=${year}`),
 
     // Accounts
     getAllAccounts: () => api.get('/accounts'),
@@ -99,13 +91,6 @@ export const projectAPI = {
     getProjectTypes: () => api.get('/common/project-types'),
     getFinancialStatuses: (category) => api.get(`/common/financial-statuses?category=${category}`),
 
-    // Member Documents
-    getMemberDocuments: (memberId) => api.get(`/uploads/members/${memberId}/documents`),
-    uploadMemberDocument: (memberId, formData) => api.post(`/uploads/members/${memberId}/documents`, formData, {
-        headers: { 'Content-Type': undefined }
-    }),
-    deleteMemberDocument: (docId) => api.delete(`/uploads/documents/${docId}`),
-
     // Expense Attachments
     getExpenseAttachments: (expenseId) => api.get(`/uploads/expenses/${expenseId}/attachments`),
     uploadExpenseAttachment: (expenseId, formData) => api.post(`/expenses/${expenseId}/attachments`, formData, {
@@ -113,6 +98,9 @@ export const projectAPI = {
     }),
     linkMemberDocToExpense: (expenseId, memberDocId) => api.post(`/uploads/expenses/${expenseId}/link-member-doc`, { member_doc_id: memberDocId }),
     deleteExpenseAttachment: (attachmentId) => api.delete(`/expenses/attachments/${attachmentId}`),
+
+    // Calendar
+    getCalendarEvents: (month) => api.get(month ? `/calendar/events?month=${month}` : '/calendar/events'),
 };
 
 export default api;

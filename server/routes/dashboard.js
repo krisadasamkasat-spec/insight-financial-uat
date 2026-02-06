@@ -13,4 +13,16 @@ router.get('/stats', async (req, res) => {
     }
 });
 
+// GET /api/dashboard/cashflow-yearly
+router.get('/cashflow-yearly', async (req, res) => {
+    try {
+        const year = req.query.year ? parseInt(req.query.year) : undefined;
+        const data = await dashboardService.getYearlyCashflow(year);
+        res.json(data);
+    } catch (err) {
+        console.error('Error fetching yearly cashflow:', err);
+        res.status(500).json({ error: 'Server Error' });
+    }
+});
+
 module.exports = router;

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
-const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
+const Modal = ({ isOpen, onClose, title, children, size = 'md', hideDefaultHeader = false, bodyClassName = 'px-6 py-4' }) => {
     // Close on escape key
     useEffect(() => {
         const handleEscape = (e) => {
@@ -40,18 +40,20 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
             {/* Modal Content */}
             <div className={`relative bg-white rounded-2xl shadow-2xl w-full ${sizeClasses[size]} mx-4 max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200`}>
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                    <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-                    <button
-                        onClick={onClose}
-                        className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                        <X className="w-[18px] h-[18px]" />
-                    </button>
-                </div>
+                {!hideDefaultHeader && (
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                        <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+                        <button
+                            onClick={onClose}
+                            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                            <X className="w-[18px] h-[18px]" />
+                        </button>
+                    </div>
+                )}
 
                 {/* Body */}
-                <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-120px)]">
+                <div className={`${bodyClassName} overflow-y-auto max-h-[calc(90vh-120px)]`}>
                     {children}
                 </div>
             </div>

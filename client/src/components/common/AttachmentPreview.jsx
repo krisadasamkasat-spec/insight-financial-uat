@@ -29,11 +29,11 @@ const DropdownPortal = ({ showDropdown, dropdownPosition, handleDropdownMouseEnt
             </div>
 
             {/* Content */}
-            <div className="bg-gray-800 text-white rounded-lg shadow-xl overflow-hidden min-w-[220px]">
+            <div className="bg-white text-gray-900 rounded-lg shadow-xl overflow-hidden min-w-[220px] border border-gray-200">
                 {/* Header */}
-                <div className="px-3 py-2 border-b border-gray-700 flex items-center gap-2">
-                    <FileCheck className="w-4 h-4 text-blue-400" />
-                    <span className="font-medium text-sm">
+                <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2 bg-gray-50/50">
+                    <FileCheck className="w-4 h-4 text-blue-500" />
+                    <span className="font-semibold text-sm text-gray-700">
                         {hasAttachments
                             ? `${attachments.length} ไฟล์แนบ`
                             : 'ไม่มีเอกสารแนบ'
@@ -48,19 +48,21 @@ const DropdownPortal = ({ showDropdown, dropdownPosition, handleDropdownMouseEnt
                             {attachments.slice(0, maxPreview).map((file, idx) => (
                                 <div
                                     key={idx}
-                                    className="flex items-center gap-2 px-2 py-1.5 rounded bg-gray-700/50 hover:bg-gray-700 transition-colors"
+                                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100"
                                 >
                                     {['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(getFileName(file)?.split('.').pop()?.toLowerCase()) && file.file_path && !imgError[idx] ? (
                                         <img
                                             src={`${API_BASE}/${file.file_path.replace(/^\//, '')}`}
                                             alt={getFileName(file)}
-                                            className="w-5 h-5 object-cover rounded border border-gray-600"
+                                            className="w-8 h-8 object-cover rounded border border-gray-200"
                                             onError={() => onImgError(idx)}
                                         />
                                     ) : (
-                                        getFileIcon(file)
+                                        <div className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded border border-gray-100">
+                                            {getFileIcon(file)}
+                                        </div>
                                     )}
-                                    <span className="text-xs text-gray-200 truncate flex-1 block max-w-[180px]">
+                                    <span className="text-xs text-gray-600 truncate flex-1 block max-w-[180px]">
                                         {getFileName(file)}
                                     </span>
                                 </div>
@@ -74,15 +76,15 @@ const DropdownPortal = ({ showDropdown, dropdownPosition, handleDropdownMouseEnt
                     </div>
                 ) : (
                     <div className="p-4 text-center">
-                        <FileX className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+                        <FileX className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                         <p className="text-xs text-gray-400">ยังไม่มีไฟล์แนบ</p>
                     </div>
                 )}
 
                 {/* Footer - Click hint */}
                 {hasAttachments && (
-                    <div className="px-3 py-2 border-t border-gray-700 text-center">
-                        <span className="text-xs text-gray-400">
+                    <div className="px-3 py-1.5 border-t border-gray-100 text-center bg-gray-50/30">
+                        <span className="text-[10px] text-blue-500 font-medium">
                             คลิกเพื่อดูรายละเอียด
                         </span>
                     </div>
