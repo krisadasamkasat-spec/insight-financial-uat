@@ -57,15 +57,17 @@ app.get('/health', (req, res) => {
 });
 
 // Run migration then start server
+// Start server immediately (to satisfy Railway health checks & port binding)
+const server = app.listen(port, '0.0.0.0', () => {
+  console.log(`Server is running on port ${port}`);
+});
+
+// Run migration in background
 runMigration()
   .then(() => {
-    app.listen(port, '0.0.0.0', () => {
-      console.log(`Server is running on port ${port}`);
-    });
+    console.log('✅ Database migration successful');
   })
   .catch((err) => {
-    console.error('Migration failed, starting server anyway:', err.message);
-    app.listen(port, '0.0.0.0', () => {
-      console.log(`Server is running on port ${port} (migration failed)`);
-    });
+    console.error('❌ Database migration failed:', err.message);
+    // Optional: Only log error, don't crash server so we can debug via logs
   });
