@@ -10,28 +10,14 @@ const port = process.env.PORT || 3000;
 
 // CORS Configuration
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-
-    const allowedOrigins = [
-      'http://localhost:5173',
-      'http://localhost:3000'
-    ];
-
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: true, // Reflect the request origin (allows all with credentials)
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 // Middleware
-app.options(/(.*)/, cors(corsOptions)); // Enable pre-flight for all routes
+// app.options('*', cors(corsOptions)); // Removed to prevent Express 5 wildcard crash
 app.use(cors(corsOptions));
 app.use(express.json());
 
