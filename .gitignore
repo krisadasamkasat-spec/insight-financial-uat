@@ -36,3 +36,10 @@ server/inspect_expenses.js
 server/inspect_types.js
 server/fix_project_codes.js
 server/migrate_schema.js
+
+# Backups
+*.backup.json
+db_backup_*.json
+
+# Uploads (ephemeral on cloud)
+server/uploads/
