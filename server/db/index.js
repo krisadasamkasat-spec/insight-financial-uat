@@ -10,7 +10,7 @@ const sslConfig = isProduction ? { rejectUnauthorized: false } : false;
 const pool = process.env.DATABASE_URL
   ? new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: sslConfig
+    ssl: process.env.DATABASE_URL.includes('railway.internal') ? false : sslConfig
   })
   : new Pool({
     user: process.env.DB_USER,
