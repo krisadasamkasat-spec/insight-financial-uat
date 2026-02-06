@@ -8,17 +8,25 @@ const runMigration = require('./migrate');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// CORS Configuration
-const corsOptions = {
-  origin: true, // Reflect the request origin (allows all with credentials)
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-};
+// Manual CORS Middleware
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  // Allow all origins (for UAT/Testing purposes)
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
 
-// Middleware
-// app.options('*', cors(corsOptions)); // Removed to prevent Express 5 wildcard crash
-app.use(cors(corsOptions));
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+
+  next();
+});
 app.use(express.json());
 
 // Serve uploaded files statically
